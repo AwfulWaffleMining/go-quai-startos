@@ -116,3 +116,7 @@ npm ci
 make            # produces go-quai_x86_64.s9pk
 make install    # sideloads to the server set as `host:` in ~/.startos/config.yaml
 ```
+
+## Donate
+
+Optional, and appreciated: [DONATE.md](DONATE.md).

@@ -9,7 +9,8 @@ export const manifest = setupManifest({
   packageRepo: 'https://github.com/AwfulWaffleMining/go-quai-startos',
   upstreamRepo: 'https://github.com/dominant-strategies/go-quai',
   marketingUrl: 'https://qu.ai',
-  donationUrl: null,
+  donationUrl:
+    'https://github.com/AwfulWaffleMining/go-quai-startos/blob/main/DONATE.md',
   description: { short, long },
   volumes: ['main'],
   images: {
