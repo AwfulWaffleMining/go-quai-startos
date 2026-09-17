@@ -17,3 +17,8 @@ export const zoneRpcPort = 9200
 export const healthPort = 8081
 
 export const mountpoint = '/data'
+
+// Quai's official mainnet snapshot (LevelDB, one top-level folder). The Sync
+// Method action lets users point at another source, such as a community mirror.
+export const defaultSnapshotUrl =
+  'https://snapshot.qu.ai/mainnet-snapshot.tar.zst'

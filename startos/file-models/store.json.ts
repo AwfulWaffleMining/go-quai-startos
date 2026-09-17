@@ -1,5 +1,6 @@
 import { FileHelper, z } from '@start9labs/start-sdk'
 import { sdk } from '../sdk'
+import { defaultSnapshotUrl } from '../utils'
 
 export const logLevels = ['error', 'warn', 'info', 'debug'] as const
 
@@ -8,6 +9,13 @@ export const shape = z
     poolTag: z.string().catch(''),
     varDiff: z.boolean().catch(true),
     logLevel: z.enum(logLevels).catch('warn'),
+    // 'unset' raises the critical Sync Method task; the node cannot start until chosen.
+    syncMethod: z.enum(['unset', 'snapshot', 'genesis']).catch('unset'),
+    snapshotUrl: z.string().catch(defaultSnapshotUrl),
+    snapshotSha256: z.string().catch(''),
+    // Non-empty = a restore is requested; bootstrap.sh compares it with the
+    // marker it writes into go-quai/.bootstrap-id after a successful restore.
+    bootstrapRequestId: z.string().catch(''),
   })
   .strip()
 

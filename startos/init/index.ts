@@ -5,6 +5,7 @@ import { setInterfaces } from '../interfaces'
 import { sdk } from '../sdk'
 import { versionGraph } from '../versions'
 import { seedFiles } from './seedFiles'
+import { syncTask } from './syncTask'
 
 export const init = sdk.setupInit(
   restoreInit,
@@ -13,6 +14,7 @@ export const init = sdk.setupInit(
   setInterfaces,
   setDependencies,
   actions,
+  syncTask,
 )
 
 export const uninit = sdk.setupUninit(versionGraph)

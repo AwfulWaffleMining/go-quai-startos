@@ -8,6 +8,35 @@ One daemon: [go-quai](https://github.com/dominant-strategies/go-quai), pinned to
 
 Mainnet (Colosseum), slice `[0 0]` (Cyprus-1) only. Orchard testnet is not offered because it needs a build from go-quai's `orchard` branch.
 
+## Sync method and snapshot restore
+
+A fresh install stores `syncMethod: 'unset'` in `store.json`, and `init/syncTask.ts` raises a **critical** task for the Sync Method action, so StartOS won't start the service until it is chosen. Restoring a backup resets the choice (`init/seedFiles.ts`), because backups contain no chain data. Nodes updated from `0.56.0:1` or older are migrated to `genesis`, so they keep syncing without the task.
+
+- **Snapshot:** the action stores `snapshotUrl`, an optional `snapshotSha256`, and a new `bootstrapRequestId` (a timestamp).
+- **Genesis:** the action stores `bootstrapRequestId: ''`.
+
+On every start, the `bootstrap` oneshot runs `bootstrap.sh` before the `go-quai` daemon, which declares `requires: ['bootstrap']`. The script:
+
+1. **Skips** when the request id is empty (deleting any abandoned download workspace) or matches `go-quai/.bootstrap-id`.
+2. **Checks free space** using the server's `Content-Length`: remaining download plus 2x the archive for the unpacked chain. The 2x ratio is an estimate; refine it after a real restore.
+3. **Downloads** to `bootstrap/snapshot.tar.zst` with `curl -C -` (resumable, 5 retries), writing progress to `bootstrap/status.json`.
+4. **Verifies** the SHA256 when one is set.
+5. **Extracts** with `zstd -dc | tar --strip-components=1` into `go-quai.partial/`. Extraction progress comes from the decoder's file position in `/proc/<pid>/fdinfo`.
+6. **Validates** that `prime/go-quai` and `zone-0-0/go-quai` exist, then removes top-level `0x*` folders (the snapshot creator's peer database).
+7. **Swaps** in the new data: only now is the old `go-quai/` removed, `go-quai.partial/` moved into place, and the marker written.
+
+Failures:
+
+- **Retries:** StartOS retries a failed oneshot with backoff capped at 30 s. An interrupted download simply resumes.
+- **Permanent failures** (checksum mismatch, corrupt archive, wrong layout): the archive is deleted and `bootstrap/failed-id` is written, so retries exit immediately instead of downloading again. A new Sync Method request clears it.
+- **Unfixable-by-retry failures** (permanent ones, and not enough space): the script waits 5 minutes before exiting, so it doesn't spam the log or the snapshot server. The wait is interruptible, so stopping the service is immediate.
+
+The **Snapshot Restore** health check reads `status.json` and the marker. Its progress messages come from the shell script and are English-only.
+
+Quai's official snapshot (`https://snapshot.qu.ai/mainnet-snapshot.tar.zst`) is LevelDB, with one top-level `mainnet-snapshot/` folder containing `prime/`, `region-0/` and `zone-0-0/`. go-quai detects the engine of an existing database, and its default is also LevelDB, so the snapshot opens directly.
+
+The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP server. The tests covered a full restore, an idempotent rerun, a resume after SIGTERM, a checksum mismatch, a wrong layout, a corrupt archive, too little space, and genesis cleanup.
+
 ## Ports
 
 | Port | Purpose | Exposed as |
@@ -32,6 +61,8 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 | `config/` | `--global.config-dir` | yes |
 | `go-quai/` | `--global.data-dir`, chain database | no |
 | `nodelogs/` | go-quai log files (symlinked from `/opt/go-quai/nodelogs`). See Logging. | no |
+| `bootstrap/` | Snapshot download workspace and `status.json` | no |
+| `go-quai/.bootstrap-id` | Request id of the snapshot restore that produced the chain data | no (inside `go-quai/`) |
 
 ## Logging
 
@@ -47,6 +78,7 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 - **Node**: zone RPC port 9200 is listening.
 - **Chain Sync**: `curl`s go-quai's health endpoint, which compares local height to `https://rpc.quai.network/cyprus1` and reports healthy within 5 blocks. Polls every 60 s once running, because each probe hits Quai's public RPC.
 - **Stratum**: all three stratum ports listening, and reports `loading` until Chain Sync last reported healthy.
+- **Snapshot Restore**: progress of the `bootstrap` oneshot, `disabled` when syncing from genesis.
 
 ## Upstream quirks this package works around
 

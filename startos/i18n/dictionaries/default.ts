@@ -38,6 +38,29 @@ const dict = {
   'Stratum Settings': 29,
   'Pool tag, variable difficulty and log level': 30,
   'Saving restarts the node if it is running.': 31,
+
+  // actions/syncMethod.ts
+  'Sync Method': 32,
+  'How this node gets the Quai chain. A snapshot gets you mining in about a day but means trusting the snapshot. Syncing from genesis verifies everything yourself but takes weeks.': 33,
+  'Restore from snapshot': 34,
+  'Snapshot URL': 35,
+  "A .tar.zst archive of go-quai chain data. Defaults to Quai's official mainnet snapshot.": 36,
+  'SHA256 (optional)': 37,
+  "If the snapshot's publisher lists a SHA256, paste it here and the download is verified before use. Quai does not currently publish one for its official snapshot.": 38,
+  '64 hexadecimal characters': 39,
+  'Sync from genesis': 40,
+  'Restore chain data from a snapshot, or sync from genesis': 41,
+  'Restoring a snapshot downloads the whole archive (hundreds of GB) on the next start and then replaces any chain data this node already has.': 42,
+
+  // init/syncTask.ts
+  'Choose how this node gets the Quai chain: restore a snapshot (about a day) or sync from genesis (weeks)': 43,
+
+  // main.ts (snapshot restore)
+  'Snapshot Restore': 44,
+  'Not used: this node syncs from genesis': 45,
+  'No snapshot restore requested': 46,
+  'Snapshot restored': 47,
+  'Preparing snapshot restore': 48,
 } as const
 
 /**

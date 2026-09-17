@@ -12,7 +12,7 @@ RUN git clone --depth 1 --branch "${GO_QUAI_VERSION}" https://github.com/dominan
 RUN go mod download && make go-quai
 
 FROM alpine:3.22
-RUN apk add --no-cache ca-certificates curl
+RUN apk add --no-cache ca-certificates curl tar zstd
 
 # go-quai reads VERSION and params/*.json relative to its working directory,
 # and writes ./nodelogs there too. Keep the binary's files together in
@@ -25,4 +25,5 @@ COPY --from=builder /src/params/forfeiture_addresses.json ./params/forfeiture_ad
 RUN ln -s /data/nodelogs /opt/go-quai/nodelogs
 
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
-RUN chmod +x /usr/local/bin/docker_entrypoint.sh /usr/local/bin/go-quai
+COPY bootstrap.sh /usr/local/bin/bootstrap.sh
+RUN chmod +x /usr/local/bin/docker_entrypoint.sh /usr/local/bin/bootstrap.sh /usr/local/bin/go-quai

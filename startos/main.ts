@@ -1,3 +1,4 @@
+import { bootstrapMarker, bootstrapStatus } from './file-models/bootstrap'
 import { storeJson } from './file-models/store.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
@@ -30,6 +31,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const poolTag = store?.poolTag ?? ''
   const varDiff = store?.varDiff ?? true
   const logLevel = store?.logLevel ?? 'warn'
+  const syncMethod = store?.syncMethod ?? 'unset'
+  const bootstrapRequestId = store?.bootstrapRequestId ?? ''
 
   const sub = await sdk.SubContainer.of(
     effects,
@@ -41,6 +44,19 @@ export const main = sdk.setupMain(async ({ effects }) => {
       readonly: false,
     }),
     'go-quai',
+  )
+
+  // Snapshot restore runs in its own subcontainer before the node (bootstrap.sh).
+  const bootstrapSub = await sdk.SubContainer.of(
+    effects,
+    { imageId: 'go-quai' },
+    sdk.Mounts.of().mountVolume({
+      volumeId: 'main',
+      subpath: null,
+      mountpoint,
+      readonly: false,
+    }),
+    'bootstrap',
   )
 
   const args = [
@@ -92,6 +108,60 @@ export const main = sdk.setupMain(async ({ effects }) => {
   }
 
   return sdk.Daemons.of(effects)
+    .addOneshot('bootstrap', {
+      subcontainer: bootstrapSub,
+      exec: {
+        command: ['/usr/local/bin/bootstrap.sh'],
+        env: {
+          BOOTSTRAP_REQUEST_ID: bootstrapRequestId,
+          BOOTSTRAP_URL: store?.snapshotUrl ?? '',
+          BOOTSTRAP_SHA256: store?.snapshotSha256 ?? '',
+        },
+      },
+      requires: [],
+    })
+    .addHealthCheck('restore', {
+      ready: {
+        display: i18n('Snapshot Restore'),
+        fn: async () => {
+          if (!bootstrapRequestId) {
+            return {
+              result: 'disabled' as const,
+              message:
+                syncMethod === 'genesis'
+                  ? i18n('Not used: this node syncs from genesis')
+                  : i18n('No snapshot restore requested'),
+            }
+          }
+          const marker = await bootstrapMarker
+            .read()
+            .once()
+            .catch(() => null)
+          if (marker?.trim() === bootstrapRequestId) {
+            return {
+              result: 'success' as const,
+              message: i18n('Snapshot restored'),
+            }
+          }
+          const status = await bootstrapStatus
+            .read()
+            .once()
+            .catch(() => null)
+          if (!status || status.requestId !== bootstrapRequestId) {
+            return {
+              result: 'starting' as const,
+              message: i18n('Preparing snapshot restore'),
+            }
+          }
+          // bootstrap.sh writes its progress messages in English.
+          if (status.phase === 'error') {
+            return { result: 'failure' as const, message: status.message }
+          }
+          return { result: 'loading' as const, message: status.message }
+        },
+      },
+      requires: [],
+    })
     .addDaemon('go-quai', {
       subcontainer: sub,
       exec: {
@@ -109,7 +179,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
             errorMessage: i18n('The Quai node is starting'),
           }),
       },
-      requires: [],
+      // Never start go-quai on top of a half-restored database.
+      requires: ['bootstrap'],
     })
     .addHealthCheck('sync', {
       ready: {
