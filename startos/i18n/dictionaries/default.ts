@@ -61,6 +61,11 @@ const dict = {
   'No snapshot restore requested': 46,
   'Snapshot restored': 47,
   'Preparing snapshot restore': 48,
+  Dashboard: 53,
+  'The mining dashboard is ready': 54,
+  'The mining dashboard is starting': 55,
+  'Mining Dashboard': 56,
+  'Hashrate, workers, blocks found, share luck, and connection settings for your miners': 57,
 
   // actions/syncMethod.ts (result)
   'Snapshot restore scheduled': 49,

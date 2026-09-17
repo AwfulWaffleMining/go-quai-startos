@@ -1,6 +1,7 @@
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import {
+  dashboardPort,
   kawpowPort,
   p2pPort,
   scryptPort,
@@ -75,6 +76,23 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     query: {},
   })
   receipts.push(await apiOrigin.export([api]))
+
+  // Mining dashboard (served by quai-dashboard, which also stores the history)
+  const dashOrigin = await mainHost.bindPort(dashboardPort, { protocol: 'http' })
+  const dashboard = sdk.createInterface(effects, {
+    name: i18n('Mining Dashboard'),
+    id: 'dashboard',
+    description: i18n(
+      'Hashrate, workers, blocks found, share luck, and connection settings for your miners',
+    ),
+    type: 'ui',
+    masked: false,
+    schemeOverride: null,
+    username: null,
+    path: '',
+    query: {},
+  })
+  receipts.push(await dashOrigin.export([dashboard]))
 
   // Inbound Quai peers (optional; outbound peering works without it).
   const p2pHost = sdk.MultiHost.of(effects, 'p2p')

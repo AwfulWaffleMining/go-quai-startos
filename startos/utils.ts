@@ -16,6 +16,8 @@ export const zoneRpcPort = 9200
 // go-quai's own health endpoint: compares local height to a reference RPC.
 export const healthPort = 8081
 
+export const dashboardPort = 8080
+
 export const mountpoint = '/data'
 
 // Quai's official mainnet snapshot (LevelDB, one top-level folder). The Sync

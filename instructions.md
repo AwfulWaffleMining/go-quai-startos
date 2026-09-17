@@ -69,6 +69,17 @@ Example password: `d=1000,lock=1`
 
 The boost shrinks each year. See the [Quai docs](https://docs.qu.ai/guides/client/node) for the full schedule.
 
+## Watching your miners
+
+Open the **Mining Dashboard** interface. It has four tabs:
+
+- **Dashboard**: hashrate with history (1H, 24H, 7D), workers, shares, and an estimate of how long until you find a block. The SHA-256 / Scrypt / KawPoW buttons switch which of your miners the whole tab is about.
+- **Workers**: every worker, its hashrate, 24-hour average, reject rate and last share. Workers that stop are marked offline and drop off after 24 hours.
+- **Blocks & luck**: blocks you have found, kept permanently, and a chart of how close each share came to the block threshold.
+- **How to connect**: fills in the pool URL, username and password for your hardware, including a suggested fixed difficulty and the lock period.
+
+While the node is syncing, the dashboard shows the progress and warns against pointing miners at it yet. Hashrate history can be exported as CSV from the chart.
+
 ## Checking your stats
 
 The **Mining Stats API** interface returns JSON. Useful paths:

@@ -49,6 +49,7 @@ The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP 
 | 3334 | Stratum, Scrypt | `stratum-scrypt` interface, TCP |
 | 3335 | Stratum, KawPoW | `stratum-kawpow` interface, TCP |
 | 3336 | Stratum stats API (HTTP/JSON, CORS enabled) | `stratum-api` interface |
+| 8080 | Mining dashboard (quai-dashboard) | `dashboard` interface (UI) |
 | 4002 | P2P | `p2p` interface |
 | 9200 | Cyprus-1 zone HTTP RPC | internal, bound to 127.0.0.1 |
 | 8081 | go-quai `--rpc.health` endpoint | internal |
@@ -66,7 +67,29 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 | `go-quai/` | `--global.data-dir`, chain database | no |
 | `nodelogs/` | go-quai log files (symlinked from `/opt/go-quai/nodelogs`). See Logging. | no |
 | `bootstrap/` | Snapshot download workspace and `status.json` | no |
+| `dashboard/stats.json` | Hashrate history, workers, shares, blocks found | yes |
 | `go-quai/.bootstrap-id` | Request id of the snapshot restore that produced the chain data | no (inside `go-quai/`) |
+
+## Mining dashboard
+
+`dashboard/` holds a single-page UI (`index.html`), the Go server that serves it (`main.go`), and four woff2 fonts. The Dockerfile builds the binary in the go-quai builder stage (standard library only, so no module downloads) and ships the page and fonts to `/opt/dashboard`. The `dashboard` daemon requires `go-quai`.
+
+go-quai keeps stratum stats in memory only — workers vanish on restart, hashrate is a 10-minute window, share history is capped at 500, and blocks found are lost — so the server polls the node every 15 s and keeps what matters on the volume (`dashboard/stats.json`, written atomically):
+
+| Kept | Retention |
+| --- | --- |
+| Hashrate and reject rate per algorithm, one sample a minute | 7 days |
+| Per-worker hashrate samples (24 h average), last-share time, offline status | worker drops 24 h after its last share |
+| Shares with difficulty and block threshold | 6000 per algorithm |
+| Blocks found, with the reward estimated at the time | permanent, included in backups |
+
+Endpoints the page reads (all relative, so the UI works on any StartOS address): `dash/summary`, `dash/workers`, `dash/blocks`, `dash/history?range=`, `dash/shares?range=`, `dash/export.csv?range=&algo=`, plus `/health`.
+
+Sources: `/api/pool/stats`, `/api/pool/workers`, `/api/pool/shares`, `/api/pool/blocks` on the stratum API; go-quai's `--rpc.health` endpoint for sync state; and `quai_getMiningInfo` on the zone RPC for reward estimates.
+
+The page is styled after Quai's media kit: monochrome with Quai red (#E20101), and per-algorithm colors from their supply tracker. Bai Jamjuree, Michroma and JetBrains Mono are bundled under the OFL (`dashboard/fonts/LICENSE.txt`); Quai's own Yapari and Monorama are not redistributable, and the Quai logo is not used. Fonts are local and charts are hand-drawn SVG, so the page makes no external requests.
+
+`scripts/make-dashboard-preview.sh` produces the standalone web preview: it swaps the bundled fonts for Google Fonts and sets `dash-mode` to `auto`, which falls back to clearly-labelled demo data when no server answers.
 
 ## Logging
 
@@ -83,6 +106,7 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 - **Chain Sync**: `curl`s go-quai's health endpoint, which compares local height to `https://rpc.quai.network/cyprus1` and reports healthy within 5 blocks. Polls every 60 s once running, because each probe hits Quai's public RPC.
 - **Stratum**: all three stratum ports listening, and reports `loading` until Chain Sync last reported healthy.
 - **Snapshot Restore**: progress of the `bootstrap` oneshot, `disabled` when syncing from genesis.
+- **Dashboard**: the dashboard server is listening on 8080.
 
 ## Upstream quirks this package works around
 

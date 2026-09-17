@@ -11,5 +11,8 @@ Keep `README.md` (technical reference) and `instructions.md` (end-user docs) in 
 - **Do not add node-level coinbase configuration** unless upstream stops taking the payout address from the stratum username.
 - **Keep the chain database and `bootstrap/` out of backups.**
 - **Never set `--node.db-engine=pebble`.** Snapshots (Quai's official one included) are LevelDB, and go-quai refuses to start when the flag doesn't match an existing database.
+- **The dashboard page in `dashboard/index.html` is the packaged one** (bundled fonts, never fakes data). Regenerate the web preview with `scripts/make-dashboard-preview.sh`; don't hand-edit a second copy.
+- **Keep the dashboard free of external requests** — no CDNs, no web fonts, no charting libraries.
+- **Don't bundle Quai's Yapari or Monorama fonts, or the Quai logo.** The media kit treats them as brand resources.
 - **Never add curl `--retry` to the snapshot download.** It truncates the partial file on retry. Retry in the script with a fresh `curl -C -`.
 - **Test `bootstrap.sh` under BusyBox `sh`** (the image's shell) against a range-capable HTTP server, covering at least resume, checksum mismatch and a corrupt archive. Keep it ShellCheck-clean.
