@@ -47,7 +47,9 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 
 ## Building
 
-Requires Docker with buildx, Node.js 22+, make and `start-cli`.
+CI builds on every push to `main` using Start9's shared workflow (`Start9Labs/start-technologies/.github/workflows/build.yml`). Download the `.s9pk` from the run's artifacts. Set a `DEV_KEY` secret to sign with your developer key.
+
+Local builds require Docker with buildx, Node.js 22+, make, git, jq and `start-cli` 2.0+. `start-cli` 2.0 only packs inside a packaging workspace, so run `start-cli s9pk init-workspace` once in the directory that contains this repo.
 
 ```sh
 npm ci
