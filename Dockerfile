@@ -11,10 +11,6 @@ WORKDIR /src
 RUN git clone --depth 1 --branch "${GO_QUAI_VERSION}" https://github.com/dominant-strategies/go-quai.git .
 RUN go mod download && make go-quai
 
-# Dashboard server and stats collector (standard library only, no network needed)
-COPY dashboard /dash
-RUN cd /dash && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /dash/quai-dashboard .
-
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates curl tar zstd
 
@@ -28,10 +24,6 @@ COPY --from=builder /src/params/genesis_alloc.json ./params/genesis_alloc.json
 COPY --from=builder /src/params/forfeiture_addresses.json ./params/forfeiture_addresses.json
 RUN ln -s /data/nodelogs /opt/go-quai/nodelogs
 
-COPY --from=builder /dash/quai-dashboard /usr/local/bin/quai-dashboard
-COPY dashboard/index.html /opt/dashboard/index.html
-COPY dashboard/fonts /opt/dashboard/fonts
-
 COPY docker_entrypoint.sh /usr/local/bin/docker_entrypoint.sh
 COPY bootstrap.sh /usr/local/bin/bootstrap.sh
-RUN chmod +x /usr/local/bin/docker_entrypoint.sh /usr/local/bin/bootstrap.sh /usr/local/bin/go-quai /usr/local/bin/quai-dashboard
+RUN chmod +x /usr/local/bin/docker_entrypoint.sh /usr/local/bin/bootstrap.sh /usr/local/bin/go-quai

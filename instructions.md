@@ -71,14 +71,14 @@ The boost shrinks each year. See the [Quai docs](https://docs.qu.ai/guides/clien
 
 ## Watching your miners
 
-Open the **Mining Dashboard** interface. It has four tabs:
+Install the **Quai Mining Dashboard** package. It runs alongside this one and shows your miners once the node is synced. It has four tabs:
 
 - **Dashboard**: hashrate with history (1H, 24H, 7D), workers, shares, and an estimate of how long until you find a block. The SHA-256 / Scrypt / KawPoW buttons switch which of your miners the whole tab is about.
 - **Workers**: every worker, its hashrate, 24-hour average, reject rate and last share. Workers that stop are marked offline and drop off after 24 hours.
 - **Blocks & luck**: blocks you have found, kept permanently, and a chart of how close each share came to the block threshold.
 - **How to connect**: fills in the pool URL, username and password for your hardware, including a suggested fixed difficulty and the lock period.
 
-While the node is syncing, the dashboard shows the progress and warns against pointing miners at it yet. Hashrate history can be exported as CSV from the chart.
+The dashboard waits for this node's Chain Sync check to pass before it starts, the same way a pool waits on its node. Hashrate history can be exported as CSV from the chart.
 
 ## Checking your stats
 
@@ -91,7 +91,9 @@ The **Mining Stats API** interface returns JSON. Useful paths:
 
 ## Settings
 
-The **Stratum Settings** action lets you set a pool tag for your blocks' coinbase, turn variable difficulty on or off, and change the log level. Saving restarts the node.
+The **Settings** action lets you set a pool tag for your blocks' coinbase, turn variable difficulty on or off, change the log level, and share the node's RPC with other packages. Saving restarts the node.
+
+RPC sharing is off by default and is only needed by the **Quai Mining Dashboard** package, which uses it for reward estimates and network difficulty. go-quai's RPC has no password, so anything that can reach it can query this node.
 
 The log level defaults to `warn`. At `info`, go-quai writes several lines for every block while it syncs, which adds up to gigabytes. Switch to `info` only while troubleshooting, then switch back.
 
@@ -112,5 +114,5 @@ Backups include your settings but **not** the chain database or snapshot downloa
 - **High reject rate**: check the miner is on the right port for its algorithm.
 - **`Default Quai coinbase address is being used` / `Default Qi coinbase address is being used`** at startup: expected, and safe to ignore. Stratum pays each block to the address your miner logs in with, not to the node's coinbase setting.
 - **`Config file not found: /data/config/config.toml`** at startup: expected. This package passes all settings as flags.
-- **Is my miner connecting?** Check `/api/pool/workers` on the Mining Stats API. For connection details in the logs, set the log level to `info` under Stratum Settings, then set it back to `warn` when you're done.
+- **Is my miner connecting?** Check `/api/pool/workers` on the Mining Stats API. For connection details in the logs, set the log level to `info` under Settings, then set it back to `warn` when you're done.
 - **Logs**: the service's Logs page shows node output. Detailed per-component logs, including `stratum.log`, are written to `nodelogs/` on the service volume.

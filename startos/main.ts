@@ -11,7 +11,6 @@ import {
   shaPort,
   stratumApiPort,
   zoneRpcPort,
-  dashboardPort,
 } from './utils'
 
 // Shape of go-quai's --rpc.health response (node/health.go).
@@ -72,8 +71,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
     '--node.slices=[0 0]',
     `--node.port=${p2pPort}`,
 
-    // Zone RPC stays on localhost; it is only used by the health checks.
-    '--rpc.http-addr=127.0.0.1',
+    // Zone RPC stays on localhost unless the user shares it with dependent packages.
+    `--rpc.http-addr=${store?.shareRpc ? '0.0.0.0' : '127.0.0.1'}`,
     '--rpc.health=true',
     `--rpc.health-port=${healthPort}`,
 
@@ -230,40 +229,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
             }),
           }
         },
-      },
-      requires: ['go-quai'],
-    })
-    .addDaemon('dashboard', {
-      subcontainer: await sdk.SubContainer.of(
-        effects,
-        { imageId: 'go-quai' },
-        sdk.Mounts.of().mountVolume({
-          volumeId: 'main',
-          subpath: null,
-          mountpoint,
-          readonly: false,
-        }),
-        'dashboard',
-      ),
-      exec: {
-        command: ['/usr/local/bin/quai-dashboard'],
-        env: {
-          DASH_ADDR: `:${dashboardPort}`,
-          DASH_ASSETS: '/opt/dashboard',
-          DASH_DATA: `${mountpoint}/dashboard`,
-          DASH_STRATUM: `http://127.0.0.1:${stratumApiPort}`,
-          DASH_HEALTH: `http://127.0.0.1:${healthPort}`,
-          DASH_RPC: `http://127.0.0.1:${zoneRpcPort}`,
-        },
-      },
-      ready: {
-        display: i18n('Dashboard'),
-        gracePeriod: 10_000,
-        fn: () =>
-          sdk.healthCheck.checkPortListening(effects, dashboardPort, {
-            successMessage: i18n('The mining dashboard is ready'),
-            errorMessage: i18n('The mining dashboard is starting'),
-          }),
       },
       requires: ['go-quai'],
     })

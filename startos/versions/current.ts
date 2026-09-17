@@ -1,10 +1,10 @@
 import { VersionInfo } from '@start9labs/start-sdk'
 
 export const current = VersionInfo.of({
-  version: '0.56.0:4',
+  version: '0.56.0:5',
   releaseNotes: {
     en_US:
-      'Adds a mining dashboard, served by the package as a new Mining Dashboard interface. It shows hashrate with history, your workers (including ones that have gone offline), blocks found, share luck against the block threshold, and a connection builder that fills in the stratum URL, username and password options for your hardware. go-quai keeps its stratum stats in memory only, so the package now collects and stores them: hashrate history for 7 days, per-worker 24-hour averages, share history beyond the 500 the node keeps, and every block found, which is kept permanently and included in backups. Hashrate history can be exported as CSV. The page is served entirely from the node, with its fonts bundled, so it makes no outside requests.',
+      'The mining dashboard moves into its own package, Quai Mining Dashboard, which installs alongside this one and waits for this node to finish syncing. Install it from the registry to get the dashboard back; your node keeps running either way. This package now only runs the node and its stratum server. The Settings action gains a switch to share the node\'s RPC with packages on this server, which the dashboard uses for reward estimates and network difficulty. It is off by default, because go-quai\'s RPC has no password.',
   },
   migrations: {},
 })

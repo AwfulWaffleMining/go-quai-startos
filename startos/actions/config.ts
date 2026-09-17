@@ -24,6 +24,13 @@ export const inputSpec = InputSpec.of({
     ),
     default: true,
   }),
+  shareRpc: Value.toggle({
+    name: i18n('Share node RPC with other packages'),
+    description: i18n(
+      'Needed by the Quai Mining Dashboard package to show reward estimates and network difficulty. go-quai has no RPC authentication, so leave this off unless a package on this server needs it.',
+    ),
+    default: false,
+  }),
   logLevel: Value.select({
     name: i18n('Log Level'),
     description: i18n(
@@ -43,8 +50,8 @@ export const config = sdk.Action.withInput(
   'config',
 
   async ({ effects }) => ({
-    name: i18n('Stratum Settings'),
-    description: i18n('Pool tag, variable difficulty and log level'),
+    name: i18n('Settings'),
+    description: i18n('Pool tag, variable difficulty, log level, and RPC sharing'),
     warning: i18n('Saving restarts the node if it is running.'),
     allowedStatuses: 'any',
     group: null,
@@ -59,6 +66,7 @@ export const config = sdk.Action.withInput(
       poolTag: s?.poolTag || null,
       varDiff: s?.varDiff ?? true,
       logLevel: s?.logLevel ?? 'warn',
+      shareRpc: s?.shareRpc ?? false,
     }
   },
 
@@ -67,6 +75,7 @@ export const config = sdk.Action.withInput(
       poolTag: input.poolTag ?? '',
       varDiff: input.varDiff,
       logLevel: input.logLevel,
+      shareRpc: input.shareRpc,
     })
   },
 )

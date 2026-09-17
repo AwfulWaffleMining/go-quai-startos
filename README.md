@@ -49,9 +49,9 @@ The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP 
 | 3334 | Stratum, Scrypt | `stratum-scrypt` interface, TCP |
 | 3335 | Stratum, KawPoW | `stratum-kawpow` interface, TCP |
 | 3336 | Stratum stats API (HTTP/JSON, CORS enabled) | `stratum-api` interface |
-| 8080 | Mining dashboard (quai-dashboard) | `dashboard` interface (UI) |
+| 9200 | Cyprus-1 zone RPC, shared with dependent packages | `rpc` interface, only when RPC sharing is on |
 | 4002 | P2P | `p2p` interface |
-| 9200 | Cyprus-1 zone HTTP RPC | internal, bound to 127.0.0.1 |
+| 9200 | Cyprus-1 zone HTTP RPC | internal (127.0.0.1) unless RPC sharing is on |
 | 8081 | go-quai `--rpc.health` endpoint | internal |
 
 ## Payouts
@@ -70,30 +70,21 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 | `dashboard/stats.json` | Hashrate history, workers, shares, blocks found | yes |
 | `go-quai/.bootstrap-id` | Request id of the snapshot restore that produced the chain data | no (inside `go-quai/`) |
 
-## Mining dashboard
+## Dependent packages
 
-`dashboard/` holds a single-page UI (`index.html`), the Go server that serves it (`main.go`), and four woff2 fonts. The Dockerfile builds the binary in the go-quai builder stage (standard library only, so no module downloads) and ships the page and fonts to `/opt/dashboard`. The `dashboard` daemon requires `go-quai`.
+The mining dashboard lives in its own package, [quai-dashboard-startos](https://github.com/AwfulWaffleMining/quai-dashboard-startos), which depends on this one and waits for the `sync` health check, the way a pool waits on its node. Two things here are its API, so don't rename them without updating that package:
 
-go-quai keeps stratum stats in memory only — workers vanish on restart, hashrate is a 10-minute window, share history is capped at 500, and blocks found are lost — so the server polls the node every 15 s and keeps what matters on the volume (`dashboard/stats.json`, written atomically):
-
-| Kept | Retention |
+| What | Value |
 | --- | --- |
-| Hashrate and reject rate per algorithm, one sample a minute | 7 days |
-| Per-worker hashrate samples (24 h average), last-share time, offline status | worker drops 24 h after its last share |
-| Shares with difficulty and block threshold | 6000 per algorithm |
-| Blocks found, with the reward estimated at the time | permanent, included in backups |
+| Stratum stats API | host id `main` (`mainHostId`), port 3336 |
+| Zone RPC | host id `rpc` (`rpcHostId`), port 9200, exported only when RPC sharing is on |
+| Health check ids | `go-quai`, `sync`, `stratum`, `restore` |
 
-Endpoints the page reads (all relative, so the UI works on any StartOS address): `dash/summary`, `dash/workers`, `dash/blocks`, `dash/history?range=`, `dash/shares?range=`, `dash/export.csv?range=&algo=`, plus `/health`.
-
-Sources: `/api/pool/stats`, `/api/pool/workers`, `/api/pool/shares`, `/api/pool/blocks` on the stratum API; go-quai's `--rpc.health` endpoint for sync state; and `quai_getMiningInfo` on the zone RPC for reward estimates.
-
-The page is styled after Quai's media kit: monochrome with Quai red (#E20101), and per-algorithm colors from their supply tracker. Bai Jamjuree, Michroma and JetBrains Mono are bundled under the OFL (`dashboard/fonts/LICENSE.txt`); Quai's own Yapari and Monorama are not redistributable, and the Quai logo is not used. Fonts are local and charts are hand-drawn SVG, so the page makes no external requests.
-
-`scripts/make-dashboard-preview.sh` produces the standalone web preview: it swaps the bundled fonts for Google Fonts and sets `dash-mode` to `auto`, which falls back to clearly-labelled demo data when no server answers.
+RPC sharing is a toggle in the Settings action (`store.json`, `shareRpc`, default false). When on, go-quai binds `--rpc.http-addr=0.0.0.0` and `interfaces.ts` exports the `rpc` interface; when off it stays on localhost. go-quai's RPC is unauthenticated, which is why it is opt-in.
 
 ## Logging
 
-`--global.log-level` defaults to `warn` (set under Stratum Settings, stored in `store.json`). The same level drives go-quai's global logger and the stratum loggers (`stratum.log`, `stratum-kawpow.log`).
+`--global.log-level` defaults to `warn` (set under Settings, stored in `store.json`). The same level drives go-quai's global logger and the stratum loggers (`stratum.log`, `stratum-kawpow.log`).
 
 - **Why not `info`:** at `info` the global logger emits `PendingHeadersOrder`, `Node in the node set` and pending-header timing lines for every block. Measured on first start, that was about 1.3 MB of StartOS log output in the first 3 minutes of sync.
 - **Global logger output:** it writes to stdout (captured by StartOS) and to `nodelogs/global.log`.

@@ -1,17 +1,20 @@
 import { i18n } from './i18n'
 import { sdk } from './sdk'
+import { storeJson } from './file-models/store.json'
 import {
-  dashboardPort,
   kawpowPort,
   p2pPort,
   scryptPort,
   shaPort,
   stratumApiPort,
+  mainHostId,
+  rpcHostId,
+  zoneRpcPort,
 } from './utils'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   // One host for all stratum ports + the stats API, so miners use one hostname.
-  const mainHost = sdk.MultiHost.of(effects, 'main')
+  const mainHost = sdk.MultiHost.of(effects, mainHostId)
 
   const stratumPorts = [
     {
@@ -77,22 +80,27 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   })
   receipts.push(await apiOrigin.export([api]))
 
-  // Mining dashboard (served by quai-dashboard, which also stores the history)
-  const dashOrigin = await mainHost.bindPort(dashboardPort, { protocol: 'http' })
-  const dashboard = sdk.createInterface(effects, {
-    name: i18n('Mining Dashboard'),
-    id: 'dashboard',
-    description: i18n(
-      'Hashrate, workers, blocks found, share luck, and connection settings for your miners',
-    ),
-    type: 'ui',
-    masked: false,
-    schemeOverride: null,
-    username: null,
-    path: '',
-    query: {},
-  })
-  receipts.push(await dashOrigin.export([dashboard]))
+  // Zone RPC, only when the user turns on sharing (see the Node RPC action).
+  // go-quai's RPC has no authentication, so it stays off by default.
+  const shareRpc = (await storeJson.read((s) => s.shareRpc).const(effects)) ?? false
+  if (shareRpc) {
+    const rpcHost = sdk.MultiHost.of(effects, rpcHostId)
+    const rpcOrigin = await rpcHost.bindPort(zoneRpcPort, { protocol: 'http' })
+    const rpc = sdk.createInterface(effects, {
+      name: i18n('Zone RPC'),
+      id: 'rpc',
+      description: i18n(
+        'Cyprus-1 JSON-RPC, used by the Quai Mining Dashboard package for reward and difficulty figures. Unauthenticated: anyone who can reach it can query this node.',
+      ),
+      type: 'api',
+      masked: false,
+      schemeOverride: null,
+      username: null,
+      path: '',
+      query: {},
+    })
+    receipts.push(await rpcOrigin.export([rpc]))
+  }
 
   // Inbound Quai peers (optional; outbound peering works without it).
   const p2pHost = sdk.MultiHost.of(effects, 'p2p')

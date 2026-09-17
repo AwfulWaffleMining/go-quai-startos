@@ -16,6 +16,8 @@ export const shape = z
     // Non-empty = a restore is requested; bootstrap.sh compares it with the
     // marker it writes into go-quai/.bootstrap-id after a successful restore.
     bootstrapRequestId: z.string().catch(''),
+    // Bind the zone RPC for dependent packages (Quai Mining Dashboard).
+    shareRpc: z.boolean().catch(false),
   })
   .strip()
 

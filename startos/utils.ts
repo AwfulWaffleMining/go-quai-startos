@@ -16,9 +16,12 @@ export const zoneRpcPort = 9200
 // go-quai's own health endpoint: compares local height to a reference RPC.
 export const healthPort = 8081
 
-export const dashboardPort = 8080
-
 export const mountpoint = '/data'
+
+// Host and interface ids other packages resolve with sdk.host.getBridgeAddress.
+// The Quai Mining Dashboard package depends on these: treat them as an API.
+export const mainHostId = 'main'
+export const rpcHostId = 'rpc'
 
 // Quai's official mainnet snapshot (LevelDB, one top-level folder). The Sync
 // Method action lets users point at another source, such as a community mirror.
