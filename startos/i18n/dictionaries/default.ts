@@ -61,6 +61,12 @@ const dict = {
   'No snapshot restore requested': 46,
   'Snapshot restored': 47,
   'Preparing snapshot restore': 48,
+
+  // actions/syncMethod.ts (result)
+  'Snapshot restore scheduled': 49,
+  'Start the service to begin. The snapshot downloads first, then extracts; progress shows in the Snapshot Restore health check, and the node starts on its own when the restore finishes. If the download is interrupted it resumes where it left off.': 50,
+  'Syncing from genesis': 51,
+  'Start the service. The node downloads and verifies every block itself, which takes weeks on typical hardware. Chain Sync shows progress.': 52,
 } as const
 
 /**

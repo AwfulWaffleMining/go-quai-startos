@@ -116,13 +116,31 @@ else
 fi
 
 # ── Download (resumable) ───────────────────────────────────────────────────────
-if [ "$TOTAL" -eq 0 ] || [ "$HAVE" -lt "$TOTAL" ]; then
-  log "Downloading..."
+# Every attempt is a fresh curl with -C -, which resumes from the file on disk.
+# Do NOT use curl's own --retry: on retry curl truncates the output file back to
+# the offset that invocation started at (0 for a fresh download), throwing away
+# everything downloaded so far. --speed-limit/--speed-time turn a silent stall
+# into a quick failure instead of waiting for the OS TCP timeout (~10 minutes).
+STALL_SECONDS="${BOOTSTRAP_STALL_SECONDS:-120}"
+RETRY_DELAY="${BOOTSTRAP_RETRY_DELAY:-15}"
+MAX_IDLE_ATTEMPTS=10
+IDLE_ATTEMPTS=0
+LAST_PCT=-1
+while :; do
+  HAVE=$(filesize "$ARCHIVE")
+  if [ "$TOTAL" -gt 0 ] && [ "$HAVE" -ge "$TOTAL" ]; then
+    break
+  fi
+  if [ "$HAVE" -gt 0 ]; then
+    log "Resuming download at $(gb "$HAVE")"
+  else
+    log "Downloading..."
+  fi
+  rm -f "$WORK/http-code"
   # shellcheck disable=SC2086
-  curl -sSfL --retry 5 --retry-delay 15 --retry-all-errors -C - $CURL_EXTRA \
-    -o "$ARCHIVE" "$URL" &
+  curl -sSfL --connect-timeout 30 --speed-limit 102400 --speed-time "$STALL_SECONDS" \
+    -C - $CURL_EXTRA -w '%{http_code}' -o "$ARCHIVE" "$URL" >"$WORK/http-code" &
   CHILD=$!
-  LAST_PCT=-1
   while kill -0 "$CHILD" 2>/dev/null; do
     NOW=$(filesize "$ARCHIVE")
     if [ "$TOTAL" -gt 0 ]; then
@@ -140,13 +158,39 @@ if [ "$TOTAL" -eq 0 ] || [ "$HAVE" -lt "$TOTAL" ]; then
   RC=0
   wait "$CHILD" || RC=$?
   CHILD=""
+  NOW=$(filesize "$ARCHIVE")
+
+  if [ "$RC" -eq 0 ] && { [ "$TOTAL" -eq 0 ] || [ "$NOW" -ge "$TOTAL" ]; }; then
+    break
+  fi
+  HTTP_CODE=$(cat "$WORK/http-code" 2>/dev/null || echo 000)
+  case "$HTTP_CODE" in
+  408 | 429) ;; # timeout / rate limited: worth retrying
+  4??)
+    fail "The snapshot URL returned HTTP $HTTP_CODE. Check the URL with the Sync Method action." wait
+    ;;
+  esac
   if [ "$RC" -eq 33 ]; then
     rm -f "$ARCHIVE"
     fail "The snapshot server does not support resuming downloads; the download will restart on the next start."
-  elif [ "$RC" -ne 0 ]; then
-    fail "Download stopped (curl exit $RC). It will resume where it left off on the next start."
   fi
-fi
+  if [ "$TOTAL" -gt 0 ] && [ "$NOW" -gt "$TOTAL" ]; then
+    rm -f "$ARCHIVE"
+    fail "Downloaded file is larger than the snapshot ($NOW > $TOTAL bytes); it was deleted and will download again."
+  fi
+
+  if [ "$NOW" -gt "$HAVE" ]; then
+    IDLE_ATTEMPTS=0
+  else
+    IDLE_ATTEMPTS=$((IDLE_ATTEMPTS + 1))
+  fi
+  if [ "$IDLE_ATTEMPTS" -ge "$MAX_IDLE_ATTEMPTS" ]; then
+    fail "Download made no progress in $MAX_IDLE_ATTEMPTS attempts (curl exit $RC). $(gb "$NOW") is kept and will resume." wait
+  fi
+  log "Download interrupted at $(gb "$NOW") (curl exit $RC); resuming in ${RETRY_DELAY}s"
+  status downloading "$NOW" "$TOTAL" "Download interrupted at $(gb "$NOW"); resuming in ${RETRY_DELAY}s"
+  pause "$RETRY_DELAY"
+done
 
 GOT=$(filesize "$ARCHIVE")
 if [ "$TOTAL" -gt 0 ] && [ "$GOT" -ne "$TOTAL" ]; then
@@ -218,7 +262,7 @@ done
 rm -rf "$DATA"
 mv "$DATA.partial" "$DATA"
 printf '%s' "$REQ" >"$DATA/.bootstrap-id"
-rm -f "$ARCHIVE" "$WORK/request-id" "$WORK/zstd.rc"
+rm -f "$ARCHIVE" "$WORK/request-id" "$WORK/zstd.rc" "$WORK/http-code"
 status complete "$GOT" "$GOT" "Snapshot restored"
 log "Snapshot restored. Starting go-quai."
 exit 0

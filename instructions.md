@@ -94,7 +94,8 @@ Backups include your settings but **not** the chain database or snapshot downloa
 
 - **Snapshot Restore shows "Not enough free space"**: free up space on the server, then restart the service. The check runs again.
 - **Snapshot Restore shows a SHA256 mismatch or extraction failure**: the download was deleted. Check the URL and checksum, then run the Sync Method action again.
-- **Snapshot download stopped**: it resumes automatically. Stopping and starting the service also resumes it.
+- **Snapshot download stopped**: it resumes automatically from where it left off, including after a stalled connection. Stopping and starting the service also resumes it.
+- **Snapshot Restore shows "returned HTTP 404"** (or another 4xx code): the snapshot URL is wrong or the file was moved. Stop the service, fix the URL with the Sync Method action, and start again.
 - **`no pending header`**: the node is not synced yet. Wait for Chain Sync.
 - **`address is not internal to this zone` or `authorization failed`**: the username is not a valid Cyprus-1 address.
 - **High reject rate**: check the miner is on the right port for its algorithm.

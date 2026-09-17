@@ -11,4 +11,5 @@ Keep `README.md` (technical reference) and `instructions.md` (end-user docs) in 
 - **Do not add node-level coinbase configuration** unless upstream stops taking the payout address from the stratum username.
 - **Keep the chain database and `bootstrap/` out of backups.**
 - **Never set `--node.db-engine=pebble`.** Snapshots (Quai's official one included) are LevelDB, and go-quai refuses to start when the flag doesn't match an existing database.
+- **Never add curl `--retry` to the snapshot download.** It truncates the partial file on retry. Retry in the script with a fresh `curl -C -`.
 - **Test `bootstrap.sh` under BusyBox `sh`** (the image's shell) against a range-capable HTTP server, covering at least resume, checksum mismatch and a corrupt archive. Keep it ShellCheck-clean.

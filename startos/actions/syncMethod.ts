@@ -95,11 +95,26 @@ export const syncMethod = sdk.Action.withInput(
         // that was restored before.
         bootstrapRequestId: new Date().toISOString(),
       })
-    } else {
-      await storeJson.merge(effects, {
-        syncMethod: 'genesis',
-        bootstrapRequestId: '',
-      })
+      return {
+        version: '1' as const,
+        title: i18n('Snapshot restore scheduled'),
+        message: i18n(
+          'Start the service to begin. The snapshot downloads first, then extracts; progress shows in the Snapshot Restore health check, and the node starts on its own when the restore finishes. If the download is interrupted it resumes where it left off.',
+        ),
+        result: null,
+      }
+    }
+    await storeJson.merge(effects, {
+      syncMethod: 'genesis',
+      bootstrapRequestId: '',
+    })
+    return {
+      version: '1' as const,
+      title: i18n('Syncing from genesis'),
+      message: i18n(
+        'Start the service. The node downloads and verifies every block itself, which takes weeks on typical hardware. Chain Sync shows progress.',
+      ),
+      result: null,
     }
   },
 )

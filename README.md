@@ -19,7 +19,11 @@ On every start, the `bootstrap` oneshot runs `bootstrap.sh` before the `go-quai`
 
 1. **Skips** when the request id is empty (deleting any abandoned download workspace) or matches `go-quai/.bootstrap-id`.
 2. **Checks free space** using the server's `Content-Length`: remaining download plus 2x the archive for the unpacked chain. The 2x ratio is an estimate; refine it after a real restore.
-3. **Downloads** to `bootstrap/snapshot.tar.zst` with `curl -C -` (resumable, 5 retries), writing progress to `bootstrap/status.json`.
+3. **Downloads** to `bootstrap/snapshot.tar.zst`, writing progress to `bootstrap/status.json`. Retries happen in the script: every attempt is a fresh `curl -C -`, which resumes from the file on disk.
+   - **No curl `--retry`:** on retry, curl truncates the output file back to the offset that invocation started at. In `0.56.0:2` that threw away a 205 GB partial download on a real restore.
+   - **Stalls:** `--speed-limit 102400 --speed-time 120` turns a silent stall into a failure after 2 minutes, instead of the ~10-minute OS TCP timeout.
+   - **HTTP 4xx** (except 408 and 429) fails right away with the code shown.
+   - **No progress:** after 10 consecutive attempts without progress, the script exits and leaves retrying to StartOS.
 4. **Verifies** the SHA256 when one is set.
 5. **Extracts** with `zstd -dc | tar --strip-components=1` into `go-quai.partial/`. Extraction progress comes from the decoder's file position in `/proc/<pid>/fdinfo`.
 6. **Validates** that `prime/go-quai` and `zone-0-0/go-quai` exist, then removes top-level `0x*` folders (the snapshot creator's peer database).
@@ -27,15 +31,15 @@ On every start, the `bootstrap` oneshot runs `bootstrap.sh` before the `go-quai`
 
 Failures:
 
-- **Retries:** StartOS retries a failed oneshot with backoff capped at 30 s. An interrupted download simply resumes.
+- **Retries:** within one run, the script retries an interrupted download every 15 s, resuming from disk. StartOS also retries a failed oneshot, with backoff capped at 30 s.
 - **Permanent failures** (checksum mismatch, corrupt archive, wrong layout): the archive is deleted and `bootstrap/failed-id` is written, so retries exit immediately instead of downloading again. A new Sync Method request clears it.
-- **Unfixable-by-retry failures** (permanent ones, and not enough space): the script waits 5 minutes before exiting, so it doesn't spam the log or the snapshot server. The wait is interruptible, so stopping the service is immediate.
+- **Unfixable-by-retry failures** (permanent ones, not enough space, an HTTP 4xx, or 10 attempts without progress): the script waits 5 minutes before exiting, so it doesn't spam the log or the snapshot server. The wait is interruptible, so stopping the service is immediate.
 
 The **Snapshot Restore** health check reads `status.json` and the marker. Its progress messages come from the shell script and are English-only.
 
 Quai's official snapshot (`https://snapshot.qu.ai/mainnet-snapshot.tar.zst`) is LevelDB, with one top-level `mainnet-snapshot/` folder containing `prime/`, `region-0/` and `zone-0-0/`. go-quai detects the engine of an existing database, and its default is also LevelDB, so the snapshot opens directly.
 
-The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP server. The tests covered a full restore, an idempotent rerun, a resume after SIGTERM, a checksum mismatch, a wrong layout, a corrupt archive, too little space, and genesis cleanup.
+The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP server. The tests covered a full restore, an idempotent rerun, a resume after SIGTERM, a server dying and returning mid-download (the file never shrinks), a stall held open by the server, a server down for good, a 404, a checksum mismatch, a wrong layout, a corrupt archive, too little space, and genesis cleanup.
 
 ## Ports
 
