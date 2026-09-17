@@ -29,7 +29,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const store = await storeJson.read().const(effects)
   const poolTag = store?.poolTag ?? ''
   const varDiff = store?.varDiff ?? true
-  const logLevel = store?.logLevel ?? 'info'
+  const logLevel = store?.logLevel ?? 'warn'
 
   const sub = await sdk.SubContainer.of(
     effects,

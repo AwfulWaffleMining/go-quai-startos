@@ -34,7 +34,7 @@ const dict = {
   'Variable Difficulty': 25,
   'Automatically tune each worker to about one share every 30 seconds. Miners can still force a value with d=<difficulty> in the password field.': 26,
   'Log Level': 27,
-  'Verbosity of the node logs': 28,
+  'At info, go-quai logs every block while syncing, which runs to gigabytes. Keep warn unless you are troubleshooting; info also logs each miner connecting to stratum.': 28,
   'Stratum Settings': 29,
   'Pool tag, variable difficulty and log level': 30,
   'Saving restarts the node if it is running.': 31,

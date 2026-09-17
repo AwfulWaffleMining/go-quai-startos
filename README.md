@@ -31,7 +31,16 @@ Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the 
 | `store.json` | Package settings (pool tag, vardiff, log level) | yes |
 | `config/` | `--global.config-dir` | yes |
 | `go-quai/` | `--global.data-dir`, chain database | no |
-| `nodelogs/` | go-quai log files (symlinked from `/opt/go-quai/nodelogs`) | no |
+| `nodelogs/` | go-quai log files (symlinked from `/opt/go-quai/nodelogs`). See Logging. | no |
+
+## Logging
+
+`--global.log-level` defaults to `warn` (set under Stratum Settings, stored in `store.json`). The same level drives go-quai's global logger and the stratum loggers (`stratum.log`, `stratum-kawpow.log`).
+
+- **Why not `info`:** at `info` the global logger emits `PendingHeadersOrder`, `Node in the node set` and pending-header timing lines for every block. Measured on first start, that was about 1.3 MB of StartOS log output in the first 3 minutes of sync.
+- **Global logger output:** it writes to stdout (captured by StartOS) and to `nodelogs/global.log`.
+- **File sizes:** the global logger is created at process start with a hardcoded 500 MB file size and 3 uncompressed backups (`log/logger.go`), so `--global.log-size=100` does not cap it. It does apply to the zone and stratum log files.
+- **Migration:** `0.56.0:1` changes installs still on the old default of `info` to `warn`.
 
 ## Health checks
 

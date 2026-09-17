@@ -59,6 +59,8 @@ The **Mining Stats API** interface returns JSON. Useful paths:
 
 The **Stratum Settings** action lets you set a pool tag for your blocks' coinbase, turn variable difficulty on or off, and change the log level. Saving restarts the node.
 
+The log level defaults to `warn`. At `info`, go-quai writes several lines for every block while it syncs, which adds up to gigabytes. Switch to `info` only while troubleshooting, then switch back.
+
 ## Storage and backups
 
 The chain database lives on this service's volume and needs a fast SSD with at least 1 TB free. Backups include your settings but **not** the chain database, which would take hundreds of GB. After a restore, the node syncs the chain again.
@@ -68,4 +70,7 @@ The chain database lives on this service's volume and needs a fast SSD with at l
 - **`no pending header`**: the node is not synced yet. Wait for Chain Sync.
 - **`address is not internal to this zone` or `authorization failed`**: the username is not a valid Cyprus-1 address.
 - **High reject rate**: check the miner is on the right port for its algorithm.
+- **`Default Quai coinbase address is being used` / `Default Qi coinbase address is being used`** at startup: expected, and safe to ignore. Stratum pays each block to the address your miner logs in with, not to the node's coinbase setting.
+- **`Config file not found: /data/config/config.toml`** at startup: expected. This package passes all settings as flags.
+- **Is my miner connecting?** Check `/api/pool/workers` on the Mining Stats API. For connection details in the logs, set the log level to `info` under Stratum Settings, then set it back to `warn` when you're done.
 - **Logs**: the service's Logs page shows node output. Detailed per-component logs, including `stratum.log`, are written to `nodelogs/` on the service volume.

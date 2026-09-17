@@ -26,8 +26,10 @@ export const inputSpec = InputSpec.of({
   }),
   logLevel: Value.select({
     name: i18n('Log Level'),
-    description: i18n('Verbosity of the node logs'),
-    default: 'info',
+    description: i18n(
+      'At info, go-quai logs every block while syncing, which runs to gigabytes. Keep warn unless you are troubleshooting; info also logs each miner connecting to stratum.',
+    ),
+    default: 'warn',
     values: {
       error: 'error',
       warn: 'warn',
@@ -56,7 +58,7 @@ export const config = sdk.Action.withInput(
     return {
       poolTag: s?.poolTag || null,
       varDiff: s?.varDiff ?? true,
-      logLevel: s?.logLevel ?? 'info',
+      logLevel: s?.logLevel ?? 'warn',
     }
   },
 

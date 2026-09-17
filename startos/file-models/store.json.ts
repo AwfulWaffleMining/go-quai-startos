@@ -7,7 +7,7 @@ export const shape = z
   .object({
     poolTag: z.string().catch(''),
     varDiff: z.boolean().catch(true),
-    logLevel: z.enum(logLevels).catch('info'),
+    logLevel: z.enum(logLevels).catch('warn'),
   })
   .strip()
 
