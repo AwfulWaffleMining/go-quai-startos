@@ -9,6 +9,9 @@ import {
   stratumApiPort,
   mainHostId,
   rpcHostId,
+  rpcInterfaceId,
+  stratumApiInterfaceId,
+  stratumInterfaceIds,
   zoneRpcPort,
 } from './utils'
 
@@ -18,19 +21,19 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
 
   const stratumPorts = [
     {
-      id: 'stratum-sha256',
+      id: stratumInterfaceIds.sha256,
       port: shaPort,
       name: i18n('Stratum: SHA-256'),
       description: i18n('Point SHA-256 ASICs here'),
     },
     {
-      id: 'stratum-scrypt',
+      id: stratumInterfaceIds.scrypt,
       port: scryptPort,
       name: i18n('Stratum: Scrypt'),
       description: i18n('Point Scrypt ASICs here'),
     },
     {
-      id: 'stratum-kawpow',
+      id: stratumInterfaceIds.kawpow,
       port: kawpowPort,
       name: i18n('Stratum: KawPoW'),
       description: i18n('Point KawPoW GPU miners here'),
@@ -67,7 +70,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   })
   const api = sdk.createInterface(effects, {
     name: i18n('Mining Stats API'),
-    id: 'stratum-api',
+    id: stratumApiInterfaceId,
     description: i18n(
       'JSON stats for connected workers, hashrate, shares and blocks found',
     ),
@@ -88,7 +91,7 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
     const rpcOrigin = await rpcHost.bindPort(zoneRpcPort, { protocol: 'http' })
     const rpc = sdk.createInterface(effects, {
       name: i18n('Zone RPC'),
-      id: 'rpc',
+      id: rpcInterfaceId,
       description: i18n(
         'Cyprus-1 JSON-RPC, used by the Quai Mining Dashboard package for reward and difficulty figures. Unauthenticated: anyone who can reach it can query this node.',
       ),

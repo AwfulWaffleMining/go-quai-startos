@@ -27,6 +27,17 @@ export const mountpoint = '/data'
 export const mainHostId = 'main'
 export const rpcHostId = 'rpc'
 
+// Interface ids, exported so dependent packages import them rather than keeping
+// their own copies: a rename then breaks their build instead of their runtime.
+export const stratumInterfaceIds = {
+  sha256: 'stratum-sha256',
+  scrypt: 'stratum-scrypt',
+  kawpow: 'stratum-kawpow',
+} as const
+
+export const stratumApiInterfaceId = 'stratum-api'
+export const rpcInterfaceId = 'rpc'
+
 // Quai's official mainnet snapshot (LevelDB, one top-level folder). The Sync
 // Method action lets users point at another source, such as a community mirror.
 export const defaultSnapshotUrl =

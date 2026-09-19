@@ -1,122 +1,217 @@
-# go-quai for StartOS
+<p align="center">
+  <img src="icon.svg" alt="Quai Network Logo" width="21%" />
+</p>
 
-Technical reference for the `go-quai` StartOS package. End-user documentation is in [instructions.md](instructions.md).
+# Quai Network on StartOS
 
-## What it runs
+> **Upstream docs:** <https://docs.qu.ai/>
+>
+> Everything not listed in this document should behave the same as upstream
+> go-quai. If a feature, setting, or behavior is not mentioned here, the
+> upstream documentation is accurate and fully applicable.
 
-One daemon: [go-quai](https://github.com/dominant-strategies/go-quai), pinned to the tag in `startos/utils.ts` (`goQuaiVersion`), built from source by the `Dockerfile`. The binary provides the full node, a Stratum v1 server per algorithm, a JSON stats API, and a health endpoint. The package has no StartOS dependencies.
+A Quai Network full node with its built-in stratum server, so you can solo mine
+Quai against your own node instead of a pool. Upstream:
+<https://github.com/dominant-strategies/go-quai>
 
-Mainnet (Colosseum), slice `[0 0]` (Cyprus-1) only. Orchard testnet is not offered because it needs a build from go-quai's `orchard` branch.
+The node runs the Prime chain, one region and the Cyprus-1 zone, and accepts
+miners on three algorithms. Rewards go entirely to the address a miner logs in
+with; the package takes no fee and never holds keys.
 
-## Sync method and snapshot restore
+---
 
-A fresh install stores `syncMethod: 'unset'` in `store.json`, and `init/syncTask.ts` raises a **critical** task for the Sync Method action, so StartOS won't start the service until it is chosen. Restoring a backup resets the choice (`init/seedFiles.ts`), because backups contain no chain data. Nodes updated from `0.56.0:1` or older are migrated to `genesis`, so they keep syncing without the task.
+## Table of Contents
 
-- **Snapshot:** the action stores `snapshotUrl`, an optional `snapshotSha256`, and a new `bootstrapRequestId` (a timestamp).
-- **Genesis:** the action stores `bootstrapRequestId: ''`.
+- [Image and Container Runtime](#image-and-container-runtime)
+- [Volume and Data Layout](#volume-and-data-layout)
+- [Installation and First-Run Flow](#installation-and-first-run-flow)
+- [Configuration Management](#configuration-management)
+- [Network Access and Interfaces](#network-access-and-interfaces)
+- [Actions](#actions)
+- [Backups and Restore](#backups-and-restore)
+- [Health Checks](#health-checks)
+- [Dependencies](#dependencies)
+- [Limitations and Differences](#limitations-and-differences)
+- [What Is Unchanged from Upstream](#what-is-unchanged-from-upstream)
+- [Contributing](#contributing)
+- [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
 
-On every start, the `bootstrap` oneshot runs `bootstrap.sh` before the `go-quai` daemon, which declares `requires: ['bootstrap']`. The script:
+---
 
-1. **Skips** when the request id is empty (deleting any abandoned download workspace) or matches `go-quai/.bootstrap-id`.
-2. **Checks free space** using the server's `Content-Length`: remaining download plus 2x the archive for the unpacked chain. The 2x ratio is an estimate; refine it after a real restore.
-3. **Downloads** to `bootstrap/snapshot.tar.zst`, writing progress to `bootstrap/status.json`. Retries happen in the script: every attempt is a fresh `curl -C -`, which resumes from the file on disk.
-   - **No curl `--retry`:** on retry, curl truncates the output file back to the offset that invocation started at. In `0.56.0:2` that threw away a 205 GB partial download on a real restore.
-   - **Stalls:** `--speed-limit 102400 --speed-time 120` turns a silent stall into a failure after 2 minutes, instead of the ~10-minute OS TCP timeout.
-   - **HTTP 4xx** (except 408 and 429) fails right away with the code shown.
-   - **No progress:** after 10 consecutive attempts without progress, the script exits and leaves retrying to StartOS.
-4. **Verifies** the SHA256 when one is set.
-5. **Extracts** with `zstd -dc | tar --strip-components=1` into `go-quai.partial/`. Extraction progress comes from the decoder's file position in `/proc/<pid>/fdinfo`.
-6. **Validates** that `prime/go-quai` and `zone-0-0/go-quai` exist, then removes top-level `0x*` folders (the snapshot creator's peer database).
-7. **Swaps** in the new data: only now is the old `go-quai/` removed, `go-quai.partial/` moved into place, and the marker written.
+## Image and Container Runtime
 
-Failures:
-
-- **Retries:** within one run, the script retries an interrupted download every 15 s, resuming from disk. StartOS also retries a failed oneshot, with backoff capped at 30 s.
-- **Permanent failures** (checksum mismatch, corrupt archive, wrong layout): the archive is deleted and `bootstrap/failed-id` is written, so retries exit immediately instead of downloading again. A new Sync Method request clears it.
-- **Unfixable-by-retry failures** (permanent ones, not enough space, an HTTP 4xx, or 10 attempts without progress): the script waits 5 minutes before exiting, so it doesn't spam the log or the snapshot server. The wait is interruptible, so stopping the service is immediate.
-
-The **Snapshot Restore** health check reads `status.json` and the marker. Its progress messages come from the shell script and are English-only.
-
-Quai's official snapshot (`https://snapshot.qu.ai/mainnet-snapshot.tar.zst`) is LevelDB, with one top-level `mainnet-snapshot/` folder containing `prime/`, `region-0/` and `zone-0-0/`. go-quai detects the engine of an existing database, and its default is also LevelDB, so the snapshot opens directly.
-
-The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP server. The tests covered a full restore, an idempotent rerun, a resume after SIGTERM, a server dying and returning mid-download (the file never shrinks), a stall held open by the server, a server down for good, a 404, a checksum mismatch, a wrong layout, a corrupt archive, too little space, and genesis cleanup.
-
-## Ports
-
-| Port | Purpose | Exposed as |
-| --- | --- | --- |
-| 3301 | Stratum, SHA-256 (preferred; StartOS may assign another) | `stratum-sha256` interface, TCP |
-| 3302 | Stratum, Scrypt | `stratum-scrypt` interface, TCP |
-| 3303 | Stratum, KawPoW | `stratum-kawpow` interface, TCP |
-| 3306 | Stratum stats API (HTTP/JSON, CORS enabled) | `stratum-api` interface |
-| 9200 | Cyprus-1 zone RPC, shared with dependent packages | `rpc` interface, only when RPC sharing is on |
-| 4002 | P2P | `p2p` interface |
-| 9200 | Cyprus-1 zone HTTP RPC | internal (127.0.0.1) unless RPC sharing is on |
-| 8081 | go-quai `--rpc.health` endpoint | internal |
-
-## Payouts
-
-Node-level coinbase flags are left at their defaults on purpose. In v0.56.0 the stratum server sets the block's primary coinbase from each miner's `mining.authorize` username (`stratum/server.go`, `SetPrimaryCoinbase(address)`) and reads the lock byte from the password (`lock=`). The username must be an address internal to Cyprus-1.
-
-## Volume layout (`main`, mounted at `/data`)
-
-| Path | Contents | Backed up |
-| --- | --- | --- |
-| `store.json` | Package settings (pool tag, vardiff, log level) | yes |
-| `config/` | `--global.config-dir` | yes |
-| `go-quai/` | `--global.data-dir`, chain database | no |
-| `nodelogs/` | go-quai log files (symlinked from `/opt/go-quai/nodelogs`). See Logging. | no |
-| `bootstrap/` | Snapshot download workspace and `status.json` | no |
-| `dashboard/stats.json` | Hashrate history, workers, shares, blocks found | yes |
-| `go-quai/.bootstrap-id` | Request id of the snapshot restore that produced the chain data | no (inside `go-quai/`) |
-
-## Dependent packages
-
-The mining dashboard lives in its own package, [quai-dashboard-startos](https://github.com/AwfulWaffleMining/quai-dashboard-startos), which depends on this one and waits for the `sync` health check, the way a pool waits on its node. Two things here are its API, so don't rename them without updating that package:
-
-| What | Value |
+| What | Detail |
 | --- | --- |
-| Stratum stats API | host id `main` (`mainHostId`), port 3336 |
-| Zone RPC | host id `rpc` (`rpcHostId`), port 9200, exported only when RPC sharing is on |
-| Health check ids | `go-quai`, `sync`, `stratum`, `restore` |
+| Image source | Custom Dockerfile, builds go-quai from the upstream source |
+| Architectures | x86_64 |
+| Entrypoint | Custom wrapper, `docker_entrypoint.sh` |
 
-RPC sharing is a toggle in the Settings action (`store.json`, `shareRpc`, default false). When on, go-quai binds `--rpc.http-addr=0.0.0.0` and `interfaces.ts` exports the `rpc` interface; when off it stays on localhost. go-quai's RPC is unauthenticated, which is why it is opt-in.
+The wrapper passes the node's flags and handles shutdown: go-quai exits non-zero
+after a graceful `SIGTERM`, which the wrapper reports as a normal stop so an
+ordinary stop is not logged as a failure.
 
-## Logging
+## Volume and Data Layout
 
-`--global.log-level` defaults to `warn` (set under Settings, stored in `store.json`). The same level drives go-quai's global logger and the stratum loggers (`stratum.log`, `stratum-kawpow.log`).
+One volume, `main`, mounted at `/data`.
 
-- **Why not `info`:** at `info` the global logger emits `PendingHeadersOrder`, `Node in the node set` and pending-header timing lines for every block. Measured on first start, that was about 1.3 MB of StartOS log output in the first 3 minutes of sync.
-- **Global logger output:** it writes to stdout (captured by StartOS) and to `nodelogs/global.log`.
-- **File sizes:** the global logger is created at process start with a hardcoded 500 MB file size and 3 uncompressed backups (`log/logger.go`), so `--global.log-size=100` does not cap it. It does apply to the zone and stratum log files.
-- **Migration:** `0.56.0:1` changes installs still on the old default of `info` to `warn`.
+| Path | Contents | In backups |
+| --- | --- | --- |
+| `go-quai/` | Chain databases for Prime, the region and the zone | no |
+| `config/` | Node configuration written by the package | yes |
+| `nodelogs/` | go-quai's own log files, rotated by the node | no |
+| `bootstrap/` | Snapshot download workspace and its status file | no |
+| `store.json` | Package settings: pool tag, difficulty mode, log level, RPC sharing, sync method | yes |
 
-## Health checks
+## Installation and First-Run Flow
 
-- **Node**: zone RPC port 9200 is listening.
-- **Chain Sync**: `curl`s go-quai's health endpoint, which compares local height to `https://rpc.quai.network/cyprus1` and reports healthy within 5 blocks. Polls every 60 s once running, because each probe hits Quai's public RPC.
-- **Stratum**: all three stratum ports listening, and reports `loading` until Chain Sync last reported healthy.
-- **Snapshot Restore**: progress of the `bootstrap` oneshot, `disabled` when syncing from genesis.
-- **Dashboard**: the dashboard server is listening on 8080.
+On install the package raises a critical task asking how to sync the chain,
+because the choice cannot be made for you:
 
-## Upstream quirks this package works around
+- **Snapshot** downloads Quai's published chain snapshot and unpacks it. This is
+  the usual choice. It needs a large, resumable download and roughly one and a
+  half times the archive size in free space while it unpacks.
+- **Genesis** syncs from block zero. Correct but slow, on the order of weeks on
+  modest hardware.
 
-- **Stratum port defaults differ from the docs.** In v0.56.0 `cmd/utils/flags.go` defaults are KawPoW 3333, Scrypt 3334, SHA-256 3335. docs.qu.ai documents SHA-256 3333 and KawPoW 3335. `main.ts` passes every address explicitly so the docs' mapping is what runs.
-- **Go version.** Upstream's Dockerfile uses `golang:1.23`, but `go.mod` declares `go 1.24`. This package builds with `golang:1.24-alpine`.
-- **Relative paths.** go-quai reads `VERSION` and `params/*.json` from its working directory and writes `./nodelogs`. The image keeps these in `/opt/go-quai`, and the daemon runs with that `cwd`.
+A oneshot runs before the node starts and performs the restore: it resumes a
+partial download across restarts, verifies an optional checksum, and swaps the
+unpacked chain into place only after a clean extraction, so an interrupted
+restore never destroys an existing chain. The node starts once that finishes.
+Restoring a package backup asks the question again, since the chain itself is
+not backed up.
 
-## Building
+## Configuration Management
 
-CI builds on every push to `main` using Start9's shared workflow (`Start9Labs/start-technologies/.github/workflows/build.yml`). Download the `.s9pk` from the run's artifacts. Set a `DEV_KEY` secret to sign with your developer key.
+| StartOS-managed | Upstream-managed |
+| --- | --- |
+| Stratum ports, data directory, log level, RPC bind address, coinbase warnings | Everything else in go-quai's own flags and config |
 
-Local builds require Docker with buildx, Node.js 22+, make, git, jq and `start-cli` 2.0+. `start-cli` 2.0 only packs inside a packaging workspace, so run `start-cli s9pk init-workspace` once in the directory that contains this repo.
+Miners set their own payout address, share difficulty and reward lock period in
+the stratum username and password, so the node takes no coinbase configuration.
 
-```sh
-npm ci
-make            # produces go-quai_x86_64.s9pk
-make install    # sideloads to the server set as `host:` in ~/.startos/config.yaml
+## Network Access and Interfaces
+
+| Interface | Port | Protocol | Purpose |
+| --- | --- | --- | --- |
+| Stratum: SHA-256 | 3301 | stratum+tcp | SHA-256 ASICs |
+| Stratum: Scrypt | 3302 | stratum+tcp | Scrypt ASICs |
+| Stratum: KawPoW | 3303 | stratum+tcp | GPUs |
+| Mining Stats API | 3306 | HTTP/JSON | Pool statistics, CORS enabled |
+| Zone RPC | 9200 | HTTP/JSON-RPC | Exported only when RPC sharing is switched on |
+| P2P | 4002 | TCP | Inbound peers, optional |
+
+> [!IMPORTANT]
+> These are preferred ports. StartOS assigns the external port, and if another
+> package already holds one, yours will differ. The Interfaces tab and the
+> Stratum health check both show the ports actually in use. Point miners at
+> those, not at the numbers above.
+
+Stratum has no authentication, so leave those ports on the local network unless
+you understand the consequences.
+
+## Actions
+
+**Settings** — visible, available in any status.
+
+| Input | Effect |
+| --- | --- |
+| Pool Tag | Optional text written into the coinbase of blocks this node builds |
+| Variable Difficulty | Whether the stratum server adjusts each miner's share difficulty automatically |
+| Share node RPC with other packages | Binds the zone RPC for other packages on this server and exports it as an interface. Off by default: go-quai's RPC has no authentication |
+| Log Level | Node verbosity. The default keeps StartOS logs readable; raising it is noisy |
+
+Saving restarts the node, which resumes where it left off.
+
+**Sync Method** — visible, available in any status. Chooses snapshot or genesis,
+and can be re-run to start a fresh snapshot restore. Raised as a critical task on
+install and after restoring a backup.
+
+## Backups and Restore
+
+Included: `store.json` and `config/`, so your settings survive.
+
+Excluded: the chain databases, node logs and the snapshot workspace. A chain
+database is hundreds of gigabytes and can be rebuilt from the network or from a
+snapshot, so backing it up would be expensive and pointless.
+
+On restore the package asks for a sync method again and rebuilds the chain.
+
+## Health Checks
+
+| Check | Meaning |
+| --- | --- |
+| Node | The node process is running |
+| Snapshot Restore | Progress of the snapshot download and extraction, or disabled when syncing from genesis |
+| Chain Sync | Current block against the network tip, green when synced |
+| Stratum | Listening, naming the assigned ports. Reports "wait" until the chain is synced, because hashing against an unsynced node is wasted work |
+
+## Dependencies
+
+None.
+
+The companion [Quai Mining Dashboard](https://github.com/AwfulWaffleMining/quai-dashboard-startos)
+package depends on this one and reads its stats API. Its reward figures use the
+zone RPC when sharing is enabled.
+
+## Limitations and Differences
+
+1. **SHA-256 and Scrypt mint workshares, not blocks.** Quai's consensus accepts
+   only KawPoW proofs for blocks; SHA-256 and Scrypt work is accepted as
+   workshares, which are included in a block and paid a share of its reward
+   pool. This is upstream behavior, not a packaging limitation.
+2. **KawPoW is untested in this package.** The port is bound and the code path
+   is shared with the other two, but no GPU has been run against it.
+3. **Snapshot restore needs a lot of disk.** The published snapshot unpacks to
+   several hundred gigabytes, and the restore holds the archive and the unpacked
+   chain at once.
+4. **x86_64 only.** The node is heavy enough that low-power ARM boards are not a
+   realistic target.
+5. **The zone RPC is unauthenticated**, which is why sharing it is off by
+   default.
+6. **Stratum has no authentication**, so anyone who can reach the port can mine
+   to their own address through your node.
+
+## What Is Unchanged from Upstream
+
+- Consensus, syncing, peering and chain validation
+- The stratum server's protocol, variable difficulty and share handling
+- Reward calculation, lock periods and coinbase handling
+- The JSON-RPC API and the node's own health endpoint
+- The stats API's shape and semantics
+
+## Contributing
+
+See [AGENTS.md](AGENTS.md) for the conventions this package follows, and
+[docs/internals.md](docs/internals.md) for how the pieces fit together.
+
+---
+
+## Quick Reference for AI Consumers
+
+```yaml
+package_id: go-quai
+architectures: [x86_64]
+volumes:
+  main: /data
+ports:
+  stratum-sha256: 3301
+  stratum-scrypt: 3302
+  stratum-kawpow: 3303
+  stratum-api: 3306
+  rpc: 9200
+  p2p: 4002
+dependencies: none
+startos_managed_env_vars: []
+actions:
+  - config
+  - sync-method
+health_checks:
+  - go-quai
+  - restore
+  - sync
+  - stratum
+backup_excludes:
+  - go-quai/
+  - nodelogs/
+  - bootstrap/
 ```
-
-## Donate
-
-Optional, and appreciated: [DONATE.md](DONATE.md).
