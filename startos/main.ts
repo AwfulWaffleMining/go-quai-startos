@@ -102,13 +102,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
           ?.addressInfo?.filter({ kind: ['ipv4', 'mdns', 'domain'] })
           ?.hostnames?.[0]?.port ?? fallback
       return {
-        sha: portOf('stratum-sha256', shaPort),
-        scrypt: portOf('stratum-scrypt', scryptPort),
-        kawpow: portOf('stratum-kawpow', kawpowPort),
+        sha: String(portOf('stratum-sha256', shaPort)),
+        scrypt: String(portOf('stratum-scrypt', scryptPort)),
+        kawpow: String(portOf('stratum-kawpow', kawpowPort)),
       }
     })
     .const()
-    .catch(() => ({ sha: shaPort, scrypt: scryptPort, kawpow: kawpowPort }))
+    .catch(() => ({
+      sha: String(shaPort),
+      scrypt: String(scryptPort),
+      kawpow: String(kawpowPort),
+    }))
 
   // Shared between the two health checks below: stratum reports "wait" until
   // the node is synced, because hashing against an unsynced node is wasted.
