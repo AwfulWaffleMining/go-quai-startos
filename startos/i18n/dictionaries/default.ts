@@ -14,7 +14,7 @@ const dict = {
   Stratum: 9,
   'Stratum port ${port} is not listening yet': 10,
   'Listening, but do not point miners here until Chain Sync is green': 11,
-  'Ready: SHA-256 on 3333, Scrypt on 3334, KawPoW on 3335': 12,
+  'Ready: SHA-256 on ${sha}, Scrypt on ${scrypt}, KawPoW on ${kawpow}': 12,
 
   // interfaces.ts
   'Stratum: SHA-256': 13,

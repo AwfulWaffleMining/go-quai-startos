@@ -5,10 +5,14 @@ export const goQuaiVersion = 'v0.56.0'
 // go-quai v0.56.0's built-in stratum defaults are KawPoW 3333 / Scrypt 3334 /
 // SHA-256 3335, which is the reverse of what docs.qu.ai documents. Every
 // address is passed explicitly in main.ts so the docs' mapping is what runs.
-export const shaPort = 3333
-export const scryptPort = 3334
-export const kawpowPort = 3335
-export const stratumApiPort = 3336
+// Preferred external ports. 3333-3336 are the docs' defaults but collide with
+// Public Pool, so StartOS silently reassigns ours to a random high port. These
+// are unlikely to be taken on a Start9 box; the real ports are always shown in
+// Interfaces and by the Stratum health check.
+export const shaPort = 3301
+export const scryptPort = 3302
+export const kawpowPort = 3303
+export const stratumApiPort = 3306
 
 export const p2pPort = 4002
 // Cyprus-1 zone HTTP RPC: rpc.http-port 9001 + zone offset 199 + 20*region + zone.

@@ -11,6 +11,7 @@ import {
   shaPort,
   stratumApiPort,
   zoneRpcPort,
+  mainHostId,
 } from './utils'
 
 // Shape of go-quai's --rpc.health response (node/health.go).
@@ -87,6 +88,27 @@ export const main = sdk.setupMain(async ({ effects }) => {
     '--node.stratum-name=startos',
   ]
   if (poolTag) args.push(`--node.stratum-pool-tag=${poolTag}`)
+
+  // The external ports StartOS assigned. They are only preferences: if another
+  // package already holds one, ours moves, and the miner needs the real number.
+  const assignedPorts = await sdk.host
+    .getOwn(effects, mainHostId, (host) => {
+      const ifaces = host
+        ? Object.values(host.bindings).flatMap((b) => Object.values(b.interfaces))
+        : []
+      const portOf = (id: string, fallback: number) =>
+        ifaces
+          .find((i) => i.id === id)
+          ?.addressInfo?.filter({ kind: ['ipv4', 'mdns', 'domain'] })
+          ?.hostnames?.[0]?.port ?? fallback
+      return {
+        sha: portOf('stratum-sha256', shaPort),
+        scrypt: portOf('stratum-scrypt', scryptPort),
+        kawpow: portOf('stratum-kawpow', kawpowPort),
+      }
+    })
+    .const()
+    .catch(() => ({ sha: shaPort, scrypt: scryptPort, kawpow: kawpowPort }))
 
   // Shared between the two health checks below: stratum reports "wait" until
   // the node is synced, because hashing against an unsynced node is wasted.
@@ -261,7 +283,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
           return {
             result: 'success' as const,
             message: i18n(
-              'Ready: SHA-256 on 3333, Scrypt on 3334, KawPoW on 3335',
+              'Ready: SHA-256 on ${sha}, Scrypt on ${scrypt}, KawPoW on ${kawpow}',
+              assignedPorts,
             ),
           }
         },

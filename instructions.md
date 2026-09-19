@@ -42,13 +42,13 @@ Addresses from other zones are rejected with `address is not internal to this zo
 
 ## 4. Point your miners
 
-Open this service's **Interfaces** tab to copy your server's address, then use the port for your hardware:
+Open this service's **Interfaces** tab and copy the address for your algorithm. **Use the port shown there**, not a port from Quai's documentation: StartOS assigns these, and if another package already holds one, yours will differ. The Stratum health check also lists the ports in use.
 
 | Hardware | Algorithm | Pool URL |
 | --- | --- | --- |
-| SHA-256 ASIC (Bitaxe, Antminer S-series, etc.) | SHA-256 | `stratum+tcp://<server-address>:3333` |
-| Scrypt ASIC (Antminer L-series, etc.) | Scrypt | `stratum+tcp://<server-address>:3334` |
-| GPU | KawPoW | `stratum+tcp://<server-address>:3335` |
+| SHA-256 ASIC (Bitaxe, Antminer S-series, etc.) | SHA-256 | port shown as **Stratum: SHA-256** |
+| Scrypt ASIC (Antminer L-series, etc.) | Scrypt | port shown as **Stratum: Scrypt** |
+| GPU | KawPoW | port shown as **Stratum: KawPoW** |
 
 - **Username:** your address, optionally with a worker name: `0xYourAddress.rig1`
 - **Password:** `x`, or any of these options joined with commas:

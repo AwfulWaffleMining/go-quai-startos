@@ -103,10 +103,11 @@ HAVE=$(filesize "$ARCHIVE")
 
 if [ "$TOTAL" -gt 0 ]; then
   AVAIL=$(($(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }') * 1024))
-  # Remaining download, plus an estimate of the unpacked chain (2x the archive).
+  # Remaining download, plus the unpacked chain. Measured on a real restore:
+  # a 225 GB archive unpacked to 271 GB (1.2x), so 1.5x leaves headroom.
   # Existing chain data is only removed after a successful extraction, so it
   # does not count as free space.
-  NEED=$((TOTAL - HAVE + 2 * TOTAL))
+  NEED=$((TOTAL - HAVE + (3 * TOTAL) / 2))
   if [ "$NEED" -gt "$AVAIL" ]; then
     fail "Not enough free space: the snapshot needs about $(gb "$NEED") (download plus unpacked chain), but only $(gb "$AVAIL") is free." wait
   fi

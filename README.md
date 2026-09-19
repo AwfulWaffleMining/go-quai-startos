@@ -45,10 +45,10 @@ The bootstrap script was tested under BusyBox `sh` against a range-capable HTTP 
 
 | Port | Purpose | Exposed as |
 | --- | --- | --- |
-| 3333 | Stratum, SHA-256 | `stratum-sha256` interface, TCP |
-| 3334 | Stratum, Scrypt | `stratum-scrypt` interface, TCP |
-| 3335 | Stratum, KawPoW | `stratum-kawpow` interface, TCP |
-| 3336 | Stratum stats API (HTTP/JSON, CORS enabled) | `stratum-api` interface |
+| 3301 | Stratum, SHA-256 (preferred; StartOS may assign another) | `stratum-sha256` interface, TCP |
+| 3302 | Stratum, Scrypt | `stratum-scrypt` interface, TCP |
+| 3303 | Stratum, KawPoW | `stratum-kawpow` interface, TCP |
+| 3306 | Stratum stats API (HTTP/JSON, CORS enabled) | `stratum-api` interface |
 | 9200 | Cyprus-1 zone RPC, shared with dependent packages | `rpc` interface, only when RPC sharing is on |
 | 4002 | P2P | `p2p` interface |
 | 9200 | Cyprus-1 zone HTTP RPC | internal (127.0.0.1) unless RPC sharing is on |

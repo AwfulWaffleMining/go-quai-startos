@@ -7,4 +7,17 @@ set -eu
 mkdir -p /data/go-quai /data/config /data/nodelogs
 
 cd /opt/go-quai
-exec /usr/local/bin/go-quai start "$@"
+
+# go-quai returns a non-zero code after a graceful SIGTERM shutdown, which
+# StartOS logs as "exited with code 1" on an ordinary stop. Run it in the
+# background so we can tell a requested stop from a real failure.
+stopping=0
+/usr/local/bin/go-quai start "$@" &
+node_pid=$!
+trap 'stopping=1; kill -TERM "$node_pid" 2>/dev/null' TERM INT
+wait "$node_pid"
+rc=$?
+if [ "$stopping" = 1 ]; then
+  exit 0
+fi
+exit "$rc"
