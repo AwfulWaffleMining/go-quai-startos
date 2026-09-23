@@ -1,0 +1,11 @@
+﻿name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    uses: Start9Labs/start-technologies/.github/workflows/release.yml@master
+    secrets:
+      DEV_KEY: ${{ secrets.DEV_KEY }}
