@@ -29,7 +29,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   // .const() makes the daemon restart whenever the user saves new settings.
   const store = await storeJson.read().const(effects)
-  const poolTag = store?.poolTag ?? ''
   const varDiff = store?.varDiff ?? true
   const logLevel = store?.logLevel ?? 'warn'
   const syncMethod = store?.syncMethod ?? 'unset'
@@ -87,7 +86,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
     `--node.stratum-vardiff=${varDiff}`,
     '--node.stratum-name=startos',
   ]
-  if (poolTag) args.push(`--node.stratum-pool-tag=${poolTag}`)
+  /* NO --node.stratum-pool-tag. Setting one stopped every workshare from being
+     included: over six hours at 51 TH/s this node produced ZERO on-chain
+     workshares against a ~59 minute expectation, with its own share counters
+     healthy (1,905 valid, 0 stale, 0 invalid, best share 97.7% of target).
+     Clearing the tag and restarting, workshares landed again within the hour.
+     A cosmetic label is not worth a setting whose observed effect is losing
+     every reward, so the option is gone rather than documented. 2026-09-23. */
 
   // The external ports StartOS assigned. They are only preferences: if another
   // package already holds one, ours moves, and the miner needs the real number.

@@ -115,7 +115,6 @@ you understand the consequences.
 
 | Input | Effect |
 | --- | --- |
-| Pool Tag | Optional text written into the coinbase of blocks this node builds |
 | Variable Difficulty | Whether the stratum server adjusts each miner's share difficulty automatically |
 | Share node RPC with other packages | Binds the zone RPC for other packages on this server and exports it as an interface. Off by default: go-quai's RPC has no authentication |
 | Log Level | Node verbosity. The default keeps StartOS logs readable; raising it is noisy |

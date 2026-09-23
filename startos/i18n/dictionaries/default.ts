@@ -29,8 +29,6 @@ const dict = {
   'Accepts inbound connections from other Quai nodes': 22,
 
   // actions/config.ts
-  'Pool Tag': 23,
-  'Optional tag written into the coinbase of blocks you find. Visible on-chain.': 24,
   'Variable Difficulty': 25,
   'Automatically tune each worker to about one share every 30 seconds. Miners can still force a value with d=<difficulty> in the password field.': 26,
   'Log Level': 27,

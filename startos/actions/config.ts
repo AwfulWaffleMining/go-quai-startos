@@ -6,17 +6,6 @@ import { sdk } from '../sdk'
 const { InputSpec, Value } = sdk
 
 export const inputSpec = InputSpec.of({
-  poolTag: Value.text({
-    name: i18n('Pool Tag'),
-    description: i18n(
-      'Optional tag written into the coinbase of blocks you find. Visible on-chain.',
-    ),
-    required: false,
-    default: null,
-    placeholder: '/AwfulWaffle/',
-    maxLength: 32,
-    patterns: [utils.Patterns.ascii],
-  }),
   varDiff: Value.toggle({
     name: i18n('Variable Difficulty'),
     description: i18n(
@@ -63,7 +52,6 @@ export const config = sdk.Action.withInput(
   async ({ effects }) => {
     const s = await storeJson.read().once()
     return {
-      poolTag: s?.poolTag || null,
       varDiff: s?.varDiff ?? true,
       logLevel: s?.logLevel ?? 'warn',
       shareRpc: s?.shareRpc ?? false,
@@ -72,7 +60,6 @@ export const config = sdk.Action.withInput(
 
   async ({ effects, input }) => {
     await storeJson.merge(effects, {
-      poolTag: input.poolTag ?? '',
       varDiff: input.varDiff,
       logLevel: input.logLevel,
       shareRpc: input.shareRpc,
