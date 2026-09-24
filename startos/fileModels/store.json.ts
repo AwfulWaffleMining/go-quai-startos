@@ -6,8 +6,6 @@ export const logLevels = ['error', 'warn', 'info', 'debug'] as const
 
 export const shape = z
   .object({
-    // Retained so an existing store still parses; NEVER used. See main.ts.
-    poolTag: z.string().catch(''),
     varDiff: z.boolean().catch(true),
     logLevel: z.enum(logLevels).catch('warn'),
     // 'unset' raises the critical Sync Method task; the node cannot start until chosen.

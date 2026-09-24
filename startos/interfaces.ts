@@ -1,6 +1,6 @@
 import { i18n } from './i18n'
 import { sdk } from './sdk'
-import { storeJson } from './file-models/store.json'
+import { storeJson } from './fileModels/store.json'
 import {
   kawpowPort,
   p2pPort,
@@ -83,9 +83,9 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   })
   receipts.push(await apiOrigin.export([api]))
 
-  // Zone RPC, only when the user turns on sharing (see the Node RPC action).
-  // go-quai's RPC has no authentication, so it stays off by default.
-  const shareRpc = (await storeJson.read((s) => s.shareRpc).const(effects)) ?? false
+  // go-quai's RPC is unauthenticated, so it is exported only while sharing is on.
+  const shareRpc =
+    (await storeJson.read((s) => s.shareRpc).const(effects)) ?? false
   if (shareRpc) {
     const rpcHost = sdk.MultiHost.of(effects, rpcHostId)
     const rpcOrigin = await rpcHost.bindPort(zoneRpcPort, { protocol: 'http' })

@@ -18,6 +18,8 @@ trap 'stopping=1; kill -TERM "$node_pid" 2>/dev/null' TERM INT
 wait "$node_pid"
 rc=$?
 if [ "$stopping" = 1 ]; then
+  # The trap interrupted the first wait; wait again so the database finishes flushing.
+  wait "$node_pid" || true
   exit 0
 fi
 exit "$rc"

@@ -1,5 +1,5 @@
-import { bootstrapMarker, bootstrapStatus } from './file-models/bootstrap'
-import { storeJson } from './file-models/store.json'
+import { bootstrapMarker, bootstrapStatus } from './fileModels/bootstrap'
+import { storeJson } from './fileModels/store.json'
 import { i18n } from './i18n'
 import { sdk } from './sdk'
 import {
@@ -27,7 +27,6 @@ type NodeHealth = {
 export const main = sdk.setupMain(async ({ effects }) => {
   console.info(i18n('Starting Quai Network node'))
 
-  // .const() makes the daemon restart whenever the user saves new settings.
   const store = await storeJson.read().const(effects)
   const varDiff = store?.varDiff ?? true
   const logLevel = store?.logLevel ?? 'warn'
@@ -46,7 +45,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'go-quai',
   )
 
-  // Snapshot restore runs in its own subcontainer before the node (bootstrap.sh).
   const bootstrapSub = await sdk.SubContainer.of(
     effects,
     { imageId: 'go-quai' },
@@ -65,19 +63,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
     `--global.log-level=${logLevel}`,
     '--global.log-size=100',
 
-    // Mainnet (Colosseum). Orchard testnet needs a build from go-quai's
-    // `orchard` branch, so it is intentionally not offered here.
     '--node.environment=colosseum',
     '--node.slices=[0 0]',
     `--node.port=${p2pPort}`,
 
-    // Zone RPC stays on localhost unless the user shares it with dependent packages.
-    `--rpc.http-addr=${store?.shareRpc ? '0.0.0.0' : '127.0.0.1'}`,
+    ...(store?.shareRpc
+      ? ['--rpc.http-addr=0.0.0.0', '--rpc.http-vhosts=*']
+      : ['--rpc.http-addr=127.0.0.1']),
     '--rpc.health=true',
     `--rpc.health-port=${healthPort}`,
 
-    // Stratum. Payout address, lock period and share difficulty come from each
-    // miner's username/password, not from node-level coinbase flags.
+    // Payout address, lock period and difficulty come from each miner's credentials.
     '--node.stratum-enabled=true',
     `--node.stratum-sha-addr=0.0.0.0:${shaPort}`,
     `--node.stratum-scrypt-addr=0.0.0.0:${scryptPort}`,
@@ -86,20 +82,14 @@ export const main = sdk.setupMain(async ({ effects }) => {
     `--node.stratum-vardiff=${varDiff}`,
     '--node.stratum-name=startos',
   ]
-  /* NO --node.stratum-pool-tag. Setting one stopped every workshare from being
-     included: over six hours at 51 TH/s this node produced ZERO on-chain
-     workshares against a ~59 minute expectation, with its own share counters
-     healthy (1,905 valid, 0 stale, 0 invalid, best share 97.7% of target).
-     Clearing the tag and restarting, workshares landed again within the hour.
-     A cosmetic label is not worth a setting whose observed effect is losing
-     every reward, so the option is gone rather than documented. 2026-09-23. */
 
-  // The external ports StartOS assigned. They are only preferences: if another
-  // package already holds one, ours moves, and the miner needs the real number.
+  // Preferred external ports are not guaranteed; report the ones actually assigned.
   const assignedPorts = await sdk.host
     .getOwn(effects, mainHostId, (host) => {
       const ifaces = host
-        ? Object.values(host.bindings).flatMap((b) => Object.values(b.interfaces))
+        ? Object.values(host.bindings).flatMap((b) =>
+            Object.values(b.interfaces),
+          )
         : []
       const portOf = (id: string, fallback: number) =>
         ifaces
@@ -119,8 +109,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
       kawpow: String(kawpowPort),
     }))
 
-  // Shared between the two health checks below: stratum reports "wait" until
-  // the node is synced, because hashing against an unsynced node is wasted.
   let synced = false
 
   const readNodeHealth = async (): Promise<NodeHealth | null> => {
@@ -237,7 +225,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
             return {
               result: 'success' as const,
               message: i18n('Synced at block ${height}', {
-                height: h.localBlockNum,
+                height: String(h.localBlockNum),
               }),
             }
           }
@@ -248,15 +236,15 @@ export const main = sdk.setupMain(async ({ effects }) => {
               result: 'loading' as const,
               message: i18n(
                 'At block ${height}; could not reach the reference node to compare',
-                { height: h.localBlockNum },
+                { height: String(h.localBlockNum) },
               ),
             }
           }
           return {
             result: 'loading' as const,
             message: i18n('Syncing: block ${height} of ${tip}', {
-              height: h.localBlockNum,
-              tip: h.referenceBlockNum,
+              height: String(h.localBlockNum),
+              tip: String(h.referenceBlockNum),
             }),
           }
         },
@@ -268,15 +256,19 @@ export const main = sdk.setupMain(async ({ effects }) => {
         display: i18n('Stratum'),
         fn: async () => {
           for (const port of [shaPort, scryptPort, kawpowPort]) {
-            const res = await sdk.healthCheck.checkPortListening(effects, port, {
-              successMessage: '',
-              errorMessage: '',
-            })
+            const res = await sdk.healthCheck.checkPortListening(
+              effects,
+              port,
+              {
+                successMessage: '',
+                errorMessage: '',
+              },
+            )
             if (res.result !== 'success') {
               return {
                 result: 'starting' as const,
                 message: i18n('Stratum port ${port} is not listening yet', {
-                  port,
+                  port: String(port),
                 }),
               }
             }
