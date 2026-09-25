@@ -29,51 +29,49 @@ const dict = {
   'Accepts inbound connections from other Quai nodes': 22,
 
   // actions/config.ts
-  'Variable Difficulty': 25,
-  'Automatically tune each worker to about one share every 30 seconds. Miners can still force a value with d=<difficulty> in the password field.': 26,
-  'Log Level': 27,
-  'At info, go-quai logs every block while syncing, which runs to gigabytes. Keep warn unless you are troubleshooting; info also logs each miner connecting to stratum.': 28,
-  'Stratum Settings': 29,
-  'Pool tag, variable difficulty and log level': 30,
-  'Saving restarts the node if it is running.': 31,
+  'Variable Difficulty': 23,
+  'Automatically tune each worker to about one share every 30 seconds. Miners can still force a value with d=<difficulty> in the password field.': 24,
+  'Log Level': 25,
+  'At info, go-quai logs every block while syncing, which runs to gigabytes. Keep warn unless you are troubleshooting; info also logs each miner connecting to stratum.': 26,
+  'Saving restarts the node if it is running.': 27,
 
   // actions/syncMethod.ts
-  'Sync Method': 32,
-  'How this node gets the Quai chain. A snapshot gets you mining in about a day but means trusting the snapshot. Syncing from genesis verifies everything yourself but takes weeks.': 33,
-  'Restore from snapshot': 34,
-  'Snapshot URL': 35,
-  "A .tar.zst archive of go-quai chain data. Defaults to Quai's official mainnet snapshot.": 36,
-  'SHA256 (optional)': 37,
-  "If the snapshot's publisher lists a SHA256, paste it here and the download is verified before use. Quai does not currently publish one for its official snapshot.": 38,
-  '64 hexadecimal characters': 39,
-  'Sync from genesis': 40,
-  'Restore chain data from a snapshot, or sync from genesis': 41,
-  'Restoring a snapshot downloads the whole archive (hundreds of GB) on the next start and then replaces any chain data this node already has.': 42,
+  'Sync Method': 28,
+  'How this node gets the Quai chain. A snapshot gets you mining in about a day but means trusting the snapshot. Syncing from genesis verifies everything yourself but takes weeks.': 29,
+  'Restore from snapshot': 30,
+  'Snapshot URL': 31,
+  "A .tar.zst archive of go-quai chain data. Defaults to Quai's official mainnet snapshot.": 32,
+  'SHA256 (optional)': 33,
+  "If the snapshot's publisher lists a SHA256, paste it here and the download is verified before use. Quai does not currently publish one for its official snapshot.": 34,
+  '64 hexadecimal characters': 35,
+  'Sync from genesis': 36,
+  'Restore chain data from a snapshot, or sync from genesis': 37,
+  'Restoring a snapshot downloads the whole archive (hundreds of GB) on the next start and then replaces any chain data this node already has.': 38,
 
   // init/syncTask.ts
-  'Choose how this node gets the Quai chain: restore a snapshot (about a day) or sync from genesis (weeks)': 43,
+  'Choose how this node gets the Quai chain: restore a snapshot (about a day) or sync from genesis (weeks)': 39,
 
   // main.ts (snapshot restore)
-  'Snapshot Restore': 44,
-  'Not used: this node syncs from genesis': 45,
-  'No snapshot restore requested': 46,
-  'Snapshot restored': 47,
-  'Preparing snapshot restore': 48,
+  'Snapshot Restore': 40,
+  'Not used: this node syncs from genesis': 41,
+  'No snapshot restore requested': 42,
+  'Snapshot restored': 43,
+  'Preparing snapshot restore': 44,
   // interfaces.ts (shared RPC)
-  'Zone RPC': 53,
-  'Cyprus-1 JSON-RPC, used by the Quai Mining Dashboard package for reward and difficulty figures. Unauthenticated: anyone who can reach it can query this node.': 54,
+  'Zone RPC': 49,
+  'Cyprus-1 JSON-RPC, used by the Quai Mining Dashboard package for reward and difficulty figures. Unauthenticated: anyone who can reach it can query this node.': 50,
 
   // actions/config.ts (RPC sharing)
-  'Share node RPC with other packages': 55,
-  'Needed by the Quai Mining Dashboard package to show reward estimates and network difficulty. go-quai has no RPC authentication, so leave this off unless a package on this server needs it.': 56,
-  'Settings': 57,
-  'Pool tag, variable difficulty, log level, and RPC sharing': 58,
+  'Share node RPC with other packages': 51,
+  'Needed by the Quai Mining Dashboard package to show reward estimates and network difficulty. go-quai has no RPC authentication, so leave this off unless a package on this server needs it.': 52,
+  Settings: 53,
+  'Variable difficulty, RPC sharing, and log level': 54,
 
   // actions/syncMethod.ts (result)
-  'Snapshot restore scheduled': 49,
-  'Start the service to begin. The snapshot downloads first, then extracts; progress shows in the Snapshot Restore health check, and the node starts on its own when the restore finishes. If the download is interrupted it resumes where it left off.': 50,
-  'Syncing from genesis': 51,
-  'Start the service. The node downloads and verifies every block itself, which takes weeks on typical hardware. Chain Sync shows progress.': 52,
+  'Snapshot restore scheduled': 45,
+  'Start the service to begin. The snapshot downloads first, then extracts; progress shows in the Snapshot Restore health check, and the node starts on its own when the restore finishes. If the download is interrupted it resumes where it left off.': 46,
+  'Syncing from genesis': 47,
+  'Start the service. The node downloads and verifies every block itself, which takes weeks on typical hardware. Chain Sync shows progress.': 48,
 } as const
 
 /**

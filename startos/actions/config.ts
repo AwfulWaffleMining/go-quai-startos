@@ -1,5 +1,4 @@
-import { utils } from '@start9labs/start-sdk'
-import { storeJson } from '../file-models/store.json'
+import { storeJson } from '../fileModels/store.json'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 
@@ -40,7 +39,7 @@ export const config = sdk.Action.withInput(
 
   async ({ effects }) => ({
     name: i18n('Settings'),
-    description: i18n('Pool tag, variable difficulty, log level, and RPC sharing'),
+    description: i18n('Variable difficulty, RPC sharing, and log level'),
     warning: i18n('Saving restarts the node if it is running.'),
     allowedStatuses: 'any',
     group: null,

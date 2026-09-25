@@ -2,9 +2,9 @@ name: Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
   pull_request:
+    paths-ignore: ['*.md']
+    branches: ['main']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -12,10 +12,7 @@ concurrency:
 
 jobs:
   build:
-    # Start9's shared package build: installs start-cli from the
-    # start-technologies monorepo, provisions the packaging-workspace build key,
-    # builds with Docker, and uploads the .s9pk as an artifact.
+    if: github.event.pull_request.draft == false
     uses: Start9Labs/start-technologies/.github/workflows/build.yml@master
     secrets:
-      # Optional. Without it the build signs with a throwaway key.
       DEV_KEY: ${{ secrets.DEV_KEY }}

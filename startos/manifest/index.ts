@@ -6,11 +6,11 @@ export const manifest = setupManifest({
   id: 'go-quai',
   title: 'Quai Network',
   license: 'GPL-3.0',
-  packageRepo: 'https://github.com/AwfulWaffleMining/go-quai-startos',
+  packageRepo: 'https://github.com/Start9-Community/go-quai-startos',
   upstreamRepo: 'https://github.com/dominant-strategies/go-quai',
   marketingUrl: 'https://qu.ai',
   donationUrl:
-    'https://github.com/AwfulWaffleMining/go-quai-startos/blob/main/DONATE.md',
+    'https://github.com/Start9-Community/go-quai-startos/blob/main/DONATE.md',
   description: { short, long },
   volumes: ['main'],
   images: {
